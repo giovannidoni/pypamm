@@ -1,8 +1,7 @@
 # cython: language_level=3, boundscheck=False, wraparound=False, cdivision=True
 import numpy as np
 cimport numpy as np
-from libc.math cimport sqrt
-from scipy.linalg.cython_blas cimport dgemm
+from libc.math cimport sqrt, exp
 from scipy.linalg import eigh, inv
 
 
@@ -31,7 +30,26 @@ cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
     cdef np.ndarray[np.float64_t, ndim=1] mean = np.mean(X, axis=0)
 
     # Compute covariance matrix
-    cdef np.ndarray[np.float64_t, ndim=2] cov = np.cov(X, rowvar=False)
+    cdef np.ndarray[np.float64_t, ndim=2] cov
+
+    # Handle edge case: single point
+    if N == 1:
+        # For a single point, use identity covariance
+        cov = np.eye(D, dtype=np.float64)
+    elif D == 1:
+        # For 1D data, compute variance manually
+        cov = np.array([[np.var(X.flatten())]], dtype=np.float64)
+    else:
+        # Normal case: compute covariance
+        try:
+            cov = np.cov(X, rowvar=False)
+
+            # Handle potential numerical issues
+            if np.any(np.isnan(cov)) or np.any(np.isinf(cov)):
+                cov = np.eye(D, dtype=np.float64)
+        except:
+            # Fallback to identity matrix if covariance computation fails
+            cov = np.eye(D, dtype=np.float64)
 
     # Compute inverse covariance matrix
     cdef np.ndarray[np.float64_t, ndim=2] inv_cov = np.linalg.inv(cov)  # Stable inversion
@@ -40,6 +58,9 @@ cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
     cdef np.ndarray[np.float64_t, ndim=1] eigvals
     cdef np.ndarray[np.float64_t, ndim=2] eigvecs
     eigvals, eigvecs = np.linalg.eigh(cov)
+
+    # Ensure positive eigenvalues (numerical stability)
+    eigvals = np.maximum(eigvals, 1e-10)
 
     # Compute bandwidth matrix Hi (scaled eigenvalues)
     cdef np.ndarray[np.float64_t, ndim=2] Hi = np.zeros((D, D), dtype=np.float64)
@@ -55,23 +76,34 @@ cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
 # -----------------------------------------------------------------------------
 # 2️) KDE Computation
 # -----------------------------------------------------------------------------
-cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, ndim=2] grid):
+cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, ndim=2] grid, double bandwidth):
     """
     Computes Kernel Density Estimation (KDE) with covariance-adaptive bandwidth.
 
     Parameters:
     - X: (N, D) Data points.
     - grid: (G, D) Grid points where KDE is evaluated.
+    - bandwidth: Scaling factor for the covariance-based bandwidth.
 
     Returns:
     - density: (G,) KDE density values at each grid point.
     """
+    # Ensure arrays are float64
+    X = np.asarray(X, dtype=np.float64)
+    grid = np.asarray(grid, dtype=np.float64)
+
     cdef int N = X.shape[0]
     cdef int D = X.shape[1]
     cdef int G = grid.shape[0]
 
     # Compute covariance-based bandwidth
     mean, cov, inv_cov, eigvals, Hi, Hiinv = gauss_prepare(X)
+
+    # Scale covariance by bandwidth parameter
+    cov = cov * bandwidth
+    inv_cov = inv_cov / bandwidth
+    Hi = Hi * sqrt(bandwidth)
+    Hiinv = Hiinv / sqrt(bandwidth)
 
     # Compute Mahalanobis KDE
     cdef np.ndarray[np.float64_t, ndim=1] density = np.zeros(G, dtype=np.float64)

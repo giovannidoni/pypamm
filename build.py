@@ -79,6 +79,14 @@ def create_extensions():
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
+        # Density modules
+        Extension(
+            "pypamm.density.kde",
+            ["src/pypamm/density/kde.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+        ),
     ]
 
     print(f"Defined {len(extensions)} extension modules")
@@ -180,13 +188,20 @@ if __name__ == "__main__":
         print("Cleaning up previous build directory")
         shutil.rmtree("build")
 
-    # Ensure the output directory exists
+    # Ensure the output directories exist
     os.makedirs("pypamm", exist_ok=True)
-    os.makedirs("pypamm/clustering", exist_ok=True)
+
+    # Create directories for all modules
+    for ext in create_extensions():
+        module_parts = ext.name.split(".")
+        if len(module_parts) > 2:  # For submodules like pypamm.clustering.xxx
+            submodule = module_parts[-2]
+            os.makedirs(f"pypamm/{submodule}", exist_ok=True)
 
     # Import Cython here to ensure it's installed
-    from Cython.Build import cythonize
     from distutils.core import setup
+
+    from Cython.Build import cythonize
 
     # Get the extension modules
     extensions = create_extensions()

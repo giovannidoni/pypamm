@@ -5,8 +5,19 @@ Wrapper functions for the cluster utilities module.
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from pypamm.clustering.cluster_utils import compute_cluster_covariance as _compute_cluster_covariance
-from pypamm.clustering.cluster_utils import merge_clusters as _merge_clusters
+# Import the Cython implementation directly
+from pypamm.clustering.cluster_utils import (
+    compute_cluster_covariance as _compute_cluster_covariance_cython,
+)
+from pypamm.clustering.cluster_utils import (
+    merge_clusters as _merge_clusters_cython,
+)
+
+# Export all functions
+__all__ = [
+    "compute_cluster_covariance",
+    "merge_clusters",
+]
 
 
 def compute_cluster_covariance(
@@ -45,11 +56,11 @@ def compute_cluster_covariance(
         raise ValueError("Length of cluster_labels must match the number of samples in X")
 
     # Compute covariance matrices
-    cov_matrices = _compute_cluster_covariance(X, cluster_labels)
+    cov_matrices = _compute_cluster_covariance_cython(X, cluster_labels)
 
     # Apply regularization if requested
     if regularization is not None:
-        if not isinstance(regularization, int | float):
+        if not isinstance(regularization, (int, float)):
             raise ValueError("regularization must be a number")
         if regularization < 0:
             raise ValueError("regularization must be non-negative")
@@ -128,4 +139,4 @@ def merge_clusters(
         raise ValueError("threshold must be between 0 and 1")
 
     # Call the Cython implementation
-    return _merge_clusters(X, probabilities, cluster_labels, covariance_matrices, threshold)
+    return _merge_clusters_cython(X, probabilities, cluster_labels, covariance_matrices, threshold)

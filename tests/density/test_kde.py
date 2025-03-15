@@ -217,8 +217,8 @@ def test_different_dimensions():
 
     for d in range(1, 5):  # Test dimensions 1 through 4
         # Generate random data in d dimensions
-        data = np.random.rand(50, d)
-        grid = np.random.rand(10, d)
+        data = np.random.rand(50, d).astype(np.float64)
+        grid = np.random.rand(10, d).astype(np.float64)
         bandwidth = 0.2
 
         # Compute KDE
@@ -264,11 +264,11 @@ def test_compute_kde_mahalanobis_distance():
     """Ensure KDE properly scales by Mahalanobis distance."""
     np.random.seed(42)
     # Create data with correlation
-    cov_matrix = np.array([[1, 0.5], [0.5, 2]])
-    X = np.random.multivariate_normal(mean=[0, 0], cov=cov_matrix, size=100)
+    cov_matrix = np.array([[1, 0.5], [0.5, 2]], dtype=np.float64)
+    X = np.random.multivariate_normal(mean=[0, 0], cov=cov_matrix, size=100).astype(np.float64)
 
     # Test points: center and an outlier
-    grid = np.array([[0, 0], [3, 3]])
+    grid = np.array([[0, 0], [3, 3]], dtype=np.float64)
 
     # Compute KDE
     density = compute_kde(X, grid, bandwidth=0.5)

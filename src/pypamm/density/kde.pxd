@@ -1,9 +1,6 @@
 # cython: language_level=3
 cimport numpy as np
-
-cdef extern from "libc/math.pxd":
-    double exp(double)
-    double sqrt(double)
+from libc.math cimport exp, sqrt
 
 cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X)
 cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, ndim=2] grid, double bandwidth)
