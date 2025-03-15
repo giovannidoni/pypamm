@@ -12,6 +12,6 @@ from pypamm.neighbor_graph import build_neighbor_graph
 from pypamm.neighbor_graph_wrapper import build_knn_graph
 from pypamm.distance_metrics import get_distance_function
 from pypamm.quick_shift import quick_shift_clustering
-from pypamm.cluster_covariance import compute_cluster_covariance
+from pypamm.cluster_covariance_wrapper import compute_cluster_covariance
 from pypamm.quick_shift_wrapper import quick_shift
 from pypamm.mst_wrapper import build_mst
