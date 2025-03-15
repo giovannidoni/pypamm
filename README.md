@@ -1,7 +1,6 @@
 # PyPAMM
 
 [![Python Package](https://github.com/giovannidoni/pypamm/actions/workflows/python-package.yml/badge.svg)](https://github.com/giovannidoni/pypamm/actions/workflows/python-package.yml)
-[![Build Wheels](https://github.com/giovannidoni/pypamm/actions/workflows/build-wheels.yml/badge.svg)](https://github.com/giovannidoni/pypamm/actions/workflows/build-wheels.yml)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://github.com/giovannidoni/pypamm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
