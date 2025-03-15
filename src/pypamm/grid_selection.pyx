@@ -1,4 +1,5 @@
 # cython: language_level=3, boundscheck=False, wraparound=False
+# distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
 import numpy as np
 cimport numpy as np
@@ -13,11 +14,11 @@ from libc.math cimport fabs, sqrt, pow
 # ------------------------------------------------------------------------------
 # 1) Distances that ignore the third parameter
 # ------------------------------------------------------------------------------
-cdef inline double dist_euclidean(
+cdef double dist_euclidean(
     double[::1] a,
     double[::1] b,
     double[:, ::1] unused
-) nogil:
+) except? -1 nogil:
     """
     Squared Euclidean distance: sum_i (a[i] - b[i])^2
     (If you want the actual L2 distance, you'd do sqrt at the end,
@@ -31,11 +32,11 @@ cdef inline double dist_euclidean(
     return dist_sq
 
 
-cdef inline double dist_manhattan(
+cdef double dist_manhattan(
     double[::1] a,
     double[::1] b,
     double[:, ::1] unused
-) nogil:
+) except? -1 nogil:
     """
     Manhattan (L1) distance = sum_i |a[i] - b[i]|.
     """
@@ -47,11 +48,11 @@ cdef inline double dist_manhattan(
     return dist_val
 
 
-cdef inline double dist_chebyshev(
+cdef double dist_chebyshev(
     double[::1] a,
     double[::1] b,
     double[:, ::1] unused
-) nogil:
+) except? -1 nogil:
     """
     Chebyshev (L∞) distance = max_i |a[i] - b[i]|.
     """
@@ -64,11 +65,11 @@ cdef inline double dist_chebyshev(
     return max_diff
 
 
-cdef inline double dist_cosine(
+cdef double dist_cosine(
     double[::1] a,
     double[::1] b,
     double[:, ::1] unused
-) nogil:
+) except? -1 nogil:
     """
     Cosine distance = 1 - (a·b)/(||a|| * ||b||).
     If either vector has length zero, define distance = 1.
@@ -91,11 +92,11 @@ cdef inline double dist_cosine(
 # ------------------------------------------------------------------------------
 # 2) Distances that USE the third parameter
 # ------------------------------------------------------------------------------
-cdef inline double dist_mahalanobis(
+cdef double dist_mahalanobis(
     double[::1] a,
     double[::1] b,
     double[:, ::1] inv_cov
-) nogil:
+) except? -1 nogil:
     """
     Squared Mahalanobis distance = (a - b)^T inv_cov (a - b).
     'inv_cov' must be a D x D inverse covariance matrix.
@@ -110,11 +111,11 @@ cdef inline double dist_mahalanobis(
     return dsum
 
 
-cdef inline double dist_minkowski(
+cdef double dist_minkowski(
     double[::1] a,
     double[::1] b,
     double[:, ::1] param
-) nogil:
+) except? -1 nogil:
     """
     Minkowski distance with exponent k = param[0, 0].
     L_k(a, b) = ( sum_i |a[i] - b[i]|^k )^(1/k)

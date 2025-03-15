@@ -1,9 +1,12 @@
-.PHONY: clean clean-build clean-pyc clean-test clean-all test build install
+.PHONY: clean clean-build clean-pyc clean-test clean-all test build install run-example dev all
 
 # Variables
 PYTHON = python
 PIP = pip
 POETRY = poetry
+
+# Default target - builds and installs the package
+all: build install
 
 # Clean build artifacts
 clean-build:
@@ -41,26 +44,42 @@ clean-all: clean-build clean-pyc clean-cython clean-test
 # Default clean command
 clean: clean-all
 
-# Run tests
-test:
-	$(POETRY) run pytest
-
 # Build the project
-build:
+build: clean-build
 	$(POETRY) build
 
 # Install the project
-install:
+install: build
 	$(POETRY) install
+
+# Run tests (depends on build and install)
+test: install
+	$(POETRY) run pytest
+
+# Run tests with verbose output
+test-v: install
+	$(POETRY) run pytest -v
+
+# Run the example
+run-example: install
+	$(POETRY) run python example.py
+
+# Development setup - installs dependencies and the package in development mode
+dev: clean
+	$(POETRY) install
+
 # Help command
 help:
+	@echo "all - build and install the package (default)"
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
 	@echo "clean-cython - remove Cython generated files"
 	@echo "clean-test - remove test artifacts"
 	@echo "clean-all - remove all artifacts"
 	@echo "clean - alias for clean-all"
-	@echo "test - run tests"
-	@echo "build - build the package"
-	@echo "install - install the package"
-	@echo "run-example - run the example script" 
+	@echo "build - build the package (depends on clean-build)"
+	@echo "install - install the package (depends on build)"
+	@echo "test - run tests (depends on install)"
+	@echo "test-v - run tests with verbose output (depends on install)"
+	@echo "run-example - run the example script (depends on install)"
+	@echo "dev - setup development environment" 
