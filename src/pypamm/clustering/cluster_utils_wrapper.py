@@ -2,11 +2,17 @@
 Wrapper functions for the cluster utilities module.
 """
 
+from typing import Optional, Union
 import numpy as np
+from numpy.typing import NDArray, ArrayLike
 from pypamm.clustering.cluster_utils import compute_cluster_covariance as _compute_cluster_covariance
 from pypamm.clustering.cluster_utils import merge_clusters as _merge_clusters
 
-def compute_cluster_covariance(X, cluster_labels, regularization=None):
+def compute_cluster_covariance(
+    X: ArrayLike, 
+    cluster_labels: ArrayLike, 
+    regularization: Optional[float] = None
+) -> NDArray[np.float64]:
     """
     Computes covariance matrices for each cluster.
 
@@ -57,7 +63,13 @@ def compute_cluster_covariance(X, cluster_labels, regularization=None):
     
     return cov_matrices
 
-def merge_clusters(X, cluster_labels, probabilities, covariance_matrices, threshold=0.8):
+def merge_clusters(
+    X: ArrayLike, 
+    cluster_labels: ArrayLike, 
+    probabilities: ArrayLike, 
+    covariance_matrices: ArrayLike, 
+    threshold: float = 0.8
+) -> NDArray[np.int32]:
     """
     Merges weak clusters based on probability and adjacency.
     

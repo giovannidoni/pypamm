@@ -2,10 +2,12 @@
 Wrapper functions for the mst module.
 """
 
+from typing import Union, List, Tuple
 import numpy as np
+from numpy.typing import NDArray, ArrayLike
 from pypamm.mst import build_mst as _build_mst
 
-def build_mst(X, metric="euclidean"):
+def build_mst(X: ArrayLike, metric: str = "euclidean") -> NDArray[np.float64]:
     """
     Builds the Minimum Spanning Tree (MST) for the dataset using Kruskal's Algorithm.
 

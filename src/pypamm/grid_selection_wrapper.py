@@ -1,9 +1,16 @@
 """
 Python wrapper for the grid_selection Cython module.
 """
+from typing import Tuple, Optional, Union
 import numpy as np
+from numpy.typing import NDArray
 
-def select_grid_points(X, ngrid, metric="euclidean", inv_cov=None):
+def select_grid_points(
+    X: NDArray[np.float64], 
+    ngrid: int, 
+    metric: str = "euclidean", 
+    inv_cov: Optional[NDArray[np.float64]] = None
+) -> Tuple[NDArray[np.int32], NDArray[np.float64]]:
     """
     Select grid points from a dataset.
     

@@ -1,9 +1,11 @@
 """
 Python wrapper for the distance_metrics Cython module.
 """
+from typing import Callable, Any
 import numpy as np
+from numpy.typing import NDArray
 
-def get_distance_function(metric="euclidean"):
+def get_distance_function(metric: str = "euclidean") -> Callable[[NDArray[np.float64], NDArray[np.float64], Any], float]:
     """
     Get a distance function for the specified metric.
     

@@ -1,10 +1,19 @@
 """
 Python wrapper for the neighbor_graph Cython module.
 """
+from typing import Tuple, Optional, Union, Literal
 import numpy as np
+from numpy.typing import NDArray, ArrayLike
 from scipy.sparse import csr_matrix
 
-def build_knn_graph(X, k, metric="euclidean", inv_cov=None, include_self=False, n_jobs=1):
+def build_knn_graph(
+    X: ArrayLike, 
+    k: int, 
+    metric: str = "euclidean", 
+    inv_cov: Optional[NDArray[np.float64]] = None, 
+    include_self: bool = False, 
+    n_jobs: int = 1
+) -> Tuple[NDArray[np.int32], NDArray[np.float64]]:
     """
     Build a k-nearest neighbor graph.
     
@@ -58,20 +67,27 @@ def build_knn_graph(X, k, metric="euclidean", inv_cov=None, include_self=False, 
     
     return indices.astype(np.int32), distances.astype(np.float64)
 
-def build_neighbor_graph(X, k, inv_cov=None, metric="euclidean", method="brute_force", graph_type="gabriel"):
+def build_neighbor_graph(
+    X: ArrayLike, 
+    k: int, 
+    inv_cov: Optional[NDArray[np.float64]] = None, 
+    metric: str = "euclidean", 
+    method: Literal["brute_force", "kd_tree"] = "brute_force", 
+    graph_type: Literal["gabriel", "knn", "relative_neighborhood"] = "gabriel"
+) -> csr_matrix:
     """
-    Build a Neighbor Graph using a specified distance metric.
+    Build a neighbor graph.
     
     Parameters:
-    - X: (N x D) NumPy array (data points)
-    - k: Number of nearest neighbors to keep
-    - inv_cov: (D x D) inverse covariance matrix for Mahalanobis distance (only needed for Mahalanobis and Minkowski)
-    - metric: "euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski"
-    - method: "brute_force" (default) or "kd_tree" for faster search
-    - graph_type: "gabriel" (default) or "knn" to compute k-nearest neighbor edges
-
+    - X: Data matrix (N x D)
+    - k: Number of neighbors to consider
+    - inv_cov: Optional parameter for certain distance metrics
+    - metric: Distance metric to use
+    - method: Method to use for neighbor search
+    - graph_type: Type of graph to build
+    
     Returns:
-    - A sparse CSR matrix representing the graph adjacency matrix
+    - graph: Sparse adjacency matrix representing the neighbor graph
     """
     # Validate inputs
     N = X.shape[0]
@@ -106,4 +122,11 @@ def build_neighbor_graph(X, k, inv_cov=None, metric="euclidean", method="brute_f
             neighbors.append((indices[i, j], distances[i, j]))
         adjacency_list.append(neighbors)
     
-    return adjacency_list 
+    # Import the Cython implementation
+    from pypamm.neighbor_graph import build_neighbor_graph as _build_neighbor_graph
+    
+    # Call the Cython implementation
+    indices, indptr, data = _build_neighbor_graph(X, k, inv_cov, metric, method, graph_type)
+    
+    # Create a sparse matrix
+    return csr_matrix((data, indices, indptr), shape=(N, N)) 

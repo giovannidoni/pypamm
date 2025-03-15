@@ -2,10 +2,19 @@
 Wrapper functions for the quick_shift module.
 """
 
+from typing import Tuple, Optional, Union
 import numpy as np
+from numpy.typing import NDArray, ArrayLike
 from pypamm.quick_shift import quick_shift_clustering as _quick_shift_clustering
 
-def quick_shift(X, prob=None, ngrid=100, metric="euclidean", lambda_qs=1.0, max_dist=np.inf):
+def quick_shift(
+    X: ArrayLike, 
+    prob: Optional[ArrayLike] = None, 
+    ngrid: int = 100, 
+    metric: str = "euclidean", 
+    lambda_qs: float = 1.0, 
+    max_dist: float = np.inf
+) -> Tuple[NDArray[np.int32], NDArray[np.int32]]:
     """
     Quick-Shift clustering algorithm based on density gradient ascent.
     
