@@ -6,7 +6,7 @@ from scipy.spatial.distance import cdist
 from scipy.sparse.csgraph import connected_components
 from pypamm.grid_selection import select_grid_points
 from pypamm.neighbor_graph import build_neighbor_graph
-from pypamm.quick_shift import quick_shift_clustering
+from pypamm.quick_shift_wrapper import quick_shift
 from pypamm.clustering.cluster_utils import compute_cluster_covariance, merge_clusters
 from pypamm.clustering.adjacency import compute_adjacency, merge
 
@@ -73,7 +73,7 @@ class PAMMCluster:
         idx_grid, grid_points = select_grid_points(X, self.n_grid, self.metric)
         neighbor_graph = build_neighbor_graph(grid_points, self.k_neighbors, metric=self.metric)
         prob = np.ones(N) / N  # Uniform probabilities
-        cluster_labels, cluster_centers = quick_shift_clustering(X, prob, self.n_grid, self.metric)
+        cluster_labels, cluster_centers = quick_shift(X, prob, self.n_grid, self.metric)
         cluster_covariances = np.array([np.eye(D) for _ in range(len(cluster_centers))])
         return cluster_labels, prob
 
