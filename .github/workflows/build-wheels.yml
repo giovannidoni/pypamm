@@ -40,7 +40,7 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_ARCHS_MACOS: "x86_64 arm64"
-          CIBW_BEFORE_BUILD: "pip install -U pip setuptools wheel numpy cython"
+          CIBW_BEFORE_BUILD: "pip install -U pip setuptools wheel numpy==2.0.0 cython>=3.0.0"
           CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "pytest {project}/tests"
 
@@ -66,6 +66,10 @@ jobs:
           version: 1.8.2
           virtualenvs-create: true
           virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: |
+          pip install -U pip setuptools wheel numpy==2.0.0 cython>=3.0.0
 
       - name: Build sdist
         run: |

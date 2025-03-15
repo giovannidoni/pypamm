@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 from setuptools import Extension, setup
 from Cython.Build import cythonize
 import numpy as np
@@ -7,25 +8,37 @@ import shutil
 
 def build(setup_kwargs):
     print("Starting build process...")
+    
+    # Define platform-specific compiler flags
+    extra_compile_args = ["-O3", "-ffast-math", "-Wno-unreachable-code"]
+    
+    # Add platform-specific flags
+    if platform.system() == "Linux":
+        # Disable vectorization on Linux to avoid undefined symbol errors
+        extra_compile_args.extend(["-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION", "-fno-vectorize"])
+    
     # Define the extension modules
     extensions = [
         Extension(
             "pypamm.distance_metrics",
             ["src/pypamm/distance_metrics.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
         Extension(
             "pypamm.grid_selection",
             ["src/pypamm/grid_selection.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
         Extension(
             "pypamm.neighbor_graph",
             ["src/pypamm/neighbor_graph.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         )
     ]
     
@@ -55,6 +68,14 @@ if __name__ == "__main__":
     # Ensure the output directory exists
     os.makedirs("pypamm", exist_ok=True)
     
+    # Define platform-specific compiler flags
+    extra_compile_args = ["-O3", "-ffast-math", "-Wno-unreachable-code"]
+    
+    # Add platform-specific flags
+    if platform.system() == "Linux":
+        # Disable vectorization on Linux to avoid undefined symbol errors
+        extra_compile_args.extend(["-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION", "-fno-vectorize"])
+    
     # Build the extensions in place
     from distutils.core import setup
     
@@ -64,19 +85,22 @@ if __name__ == "__main__":
             "pypamm.distance_metrics",
             ["src/pypamm/distance_metrics.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
         Extension(
             "pypamm.grid_selection",
             ["src/pypamm/grid_selection.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
         Extension(
             "pypamm.neighbor_graph",
             ["src/pypamm/neighbor_graph.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         )
     ]
     
