@@ -2,11 +2,10 @@
 PyPAMM (Python Probabilistic Analysis of Molecular Motifs) package.
 """
 
-try:
-    from .grid_selection import select_grid_points
-    from .neighbor_graph import build_neighbor_graph
-    __all__ = ['select_grid_points', 'build_neighbor_graph']
-except ImportError:
-    import warnings
-    warnings.warn("Could not import modules. Make sure Cython extensions are compiled.")
-    __all__ = []
+# Define the modules we want to import
+__all__ = ['select_grid_points', 'build_neighbor_graph', 'build_knn_graph', 'get_distance_function']
+
+# Import the modules
+from pypamm.grid_selection import select_grid_points
+from pypamm.neighbor_graph_wrapper import build_neighbor_graph, build_knn_graph
+from pypamm.distance_metrics import get_distance_function

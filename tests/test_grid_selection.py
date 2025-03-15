@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from pypamm.grid_selection import select_grid_points
+from pypamm.distance_metrics import get_distance_function
 
 # Fixtures for common test data
 @pytest.fixture
@@ -54,13 +55,13 @@ def test_different_metrics(random_data, metric):
     assert np.all(idxgrid >= 0)
     assert np.all(idxgrid < random_data.shape[0])
 
-# Test Mahalanobis distance
+# Test with Mahalanobis distance
 def test_mahalanobis_distance(random_data):
     """Test select_grid_points with Mahalanobis distance."""
     ngrid = 5
     D = random_data.shape[1]
     
-    # Create a simple inverse covariance matrix (identity for simplicity)
+    # Create an identity matrix for simplicity (reduces to Euclidean)
     inv_cov = np.eye(D)
     
     idxgrid, Y = select_grid_points(random_data, ngrid, metric="mahalanobis", inv_cov=inv_cov)
@@ -68,53 +69,55 @@ def test_mahalanobis_distance(random_data):
     # Check output shapes
     assert idxgrid.shape == (ngrid,)
     assert Y.shape == (ngrid, D)
+    
+    # Check that indices are within bounds
+    assert np.all(idxgrid >= 0)
+    assert np.all(idxgrid < random_data.shape[0])
 
-# Test Minkowski distance
+# Test with Minkowski distance
 def test_minkowski_distance(random_data):
     """Test select_grid_points with Minkowski distance."""
     ngrid = 5
     
-    # Create parameter for Minkowski distance (p=3)
-    p = np.array([[3.0]])
+    # Create parameter for p=2 (Euclidean)
+    p = np.array([[2.0]])
     
     idxgrid, Y = select_grid_points(random_data, ngrid, metric="minkowski", inv_cov=p)
     
     # Check output shapes
     assert idxgrid.shape == (ngrid,)
     assert Y.shape == (ngrid, random_data.shape[1])
+    
+    # Check that indices are within bounds
+    assert np.all(idxgrid >= 0)
+    assert np.all(idxgrid < random_data.shape[0])
 
-# Test error cases
-def test_invalid_metric():
+# Test error handling
+def test_invalid_metric(random_data):
     """Test that an invalid metric raises a ValueError."""
-    data = np.random.rand(10, 2)
     with pytest.raises(ValueError, match="Unsupported metric"):
-        select_grid_points(data, 3, metric="invalid_metric")
+        select_grid_points(random_data, 5, metric="invalid_metric")
 
-def test_mahalanobis_without_inv_cov():
+def test_mahalanobis_without_inv_cov(random_data):
     """Test that Mahalanobis without inv_cov raises a ValueError."""
-    data = np.random.rand(10, 2)
     with pytest.raises(ValueError, match="Must supply inv_cov"):
-        select_grid_points(data, 3, metric="mahalanobis")
+        select_grid_points(random_data, 5, metric="mahalanobis")
 
-def test_mahalanobis_wrong_inv_cov_shape():
+def test_mahalanobis_wrong_shape(random_data):
     """Test that Mahalanobis with wrong inv_cov shape raises a ValueError."""
-    data = np.random.rand(10, 2)
-    inv_cov = np.eye(3)  # Wrong shape, should be 2x2
+    D = random_data.shape[1]
     with pytest.raises(ValueError, match="inv_cov must be"):
-        select_grid_points(data, 3, metric="mahalanobis", inv_cov=inv_cov)
+        select_grid_points(random_data, 5, metric="mahalanobis", inv_cov=np.eye(D+1))
 
-def test_minkowski_without_param():
+def test_minkowski_without_param(random_data):
     """Test that Minkowski without parameter raises a ValueError."""
-    data = np.random.rand(10, 2)
     with pytest.raises(ValueError, match="Must supply a 1x1 array"):
-        select_grid_points(data, 3, metric="minkowski")
+        select_grid_points(random_data, 5, metric="minkowski")
 
-def test_minkowski_wrong_param_shape():
+def test_minkowski_wrong_shape(random_data):
     """Test that Minkowski with wrong parameter shape raises a ValueError."""
-    data = np.random.rand(10, 2)
-    param = np.array([[1.0, 2.0]])  # Wrong shape, should be 1x1
     with pytest.raises(ValueError, match="inv_cov must be a 1x1 array"):
-        select_grid_points(data, 3, metric="minkowski", inv_cov=param)
+        select_grid_points(random_data, 5, metric="minkowski", inv_cov=np.array([[1.0, 2.0]]))
 
 # Test algorithm correctness
 def test_min_max_algorithm_correctness(simple_data):

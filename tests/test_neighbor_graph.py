@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from pypamm.neighbor_graph import build_neighbor_graph
+from pypamm.distance_metrics import get_distance_function
 
 # Fixtures for common test data
 @pytest.fixture
@@ -59,59 +60,71 @@ def test_different_metrics(random_data, metric):
     for neighbors in adjacency_list:
         assert len(neighbors) == k
 
-# Test Mahalanobis distance
+# Test with Mahalanobis distance
 def test_mahalanobis_distance(random_data):
     """Test build_neighbor_graph with Mahalanobis distance."""
     k = 3
     D = random_data.shape[1]
     
-    # Create a simple inverse covariance matrix (identity for simplicity)
+    # Create an identity matrix for simplicity (reduces to Euclidean)
     inv_cov = np.eye(D)
     
-    adjacency_list = build_neighbor_graph(random_data, k, inv_cov=inv_cov, metric="mahalanobis")
+    adjacency_matrix = build_neighbor_graph(
+        random_data, k, inv_cov=inv_cov, metric="mahalanobis"
+    )
     
-    # Check that the adjacency list has the correct length
-    assert len(adjacency_list) == len(random_data)
+    # Check that the matrix has the correct shape
+    assert adjacency_matrix.shape == (len(random_data), len(random_data))
     
-    # Check that each point has exactly k neighbors
-    for neighbors in adjacency_list:
-        assert len(neighbors) == k
+    # Check that each row has exactly k non-zero entries
+    for i in range(len(random_data)):
+        assert adjacency_matrix[i].count_nonzero() == k
 
-# Test Minkowski distance
+# Test with Minkowski distance
 def test_minkowski_distance(random_data):
     """Test build_neighbor_graph with Minkowski distance."""
     k = 3
     
-    # Create parameter for Minkowski distance (p=3)
-    p = np.array([[3.0]])
+    # Create parameter for p=2 (Euclidean)
+    p = np.array([[2.0]])
     
-    adjacency_list = build_neighbor_graph(random_data, k, inv_cov=p, metric="minkowski")
+    adjacency_matrix = build_neighbor_graph(
+        random_data, k, inv_cov=p, metric="minkowski"
+    )
     
-    # Check that the adjacency list has the correct length
-    assert len(adjacency_list) == len(random_data)
+    # Check that the matrix has the correct shape
+    assert adjacency_matrix.shape == (len(random_data), len(random_data))
     
-    # Check that each point has exactly k neighbors
-    for neighbors in adjacency_list:
-        assert len(neighbors) == k
+    # Check that each row has exactly k non-zero entries
+    for i in range(len(random_data)):
+        assert adjacency_matrix[i].count_nonzero() == k
 
-# Test error cases
-def test_invalid_metric():
+# Test error handling
+def test_invalid_metric(random_data):
     """Test that an invalid metric raises a ValueError."""
-    data = np.random.rand(10, 2)
     with pytest.raises(ValueError, match="Unsupported metric"):
-        build_neighbor_graph(data, 3, metric="invalid_metric")
+        build_neighbor_graph(random_data, 3, metric="invalid_metric")
 
-def test_mahalanobis_without_inv_cov():
+def test_mahalanobis_without_inv_cov(random_data):
     """Test that Mahalanobis without inv_cov raises a ValueError."""
-    data = np.random.rand(10, 2)
     with pytest.raises(ValueError, match="Must supply inv_cov"):
-        build_neighbor_graph(data, 3, metric="mahalanobis")
+        build_neighbor_graph(random_data, 3, metric="mahalanobis")
 
-def test_minkowski_without_param():
+def test_mahalanobis_wrong_shape(random_data):
+    """Test that Mahalanobis with wrong inv_cov shape raises a ValueError."""
+    D = random_data.shape[1]
+    with pytest.raises(ValueError, match="inv_cov must be"):
+        build_neighbor_graph(random_data, 3, metric="mahalanobis", inv_cov=np.eye(D+1))
+
+def test_minkowski_without_param(random_data):
     """Test that Minkowski without parameter raises a ValueError."""
-    data = np.random.rand(10, 2)
     with pytest.raises(ValueError, match="Must supply a 1x1 array"):
-        build_neighbor_graph(data, 3, metric="minkowski")
+        build_neighbor_graph(random_data, 3, metric="minkowski")
+
+def test_minkowski_wrong_shape(random_data):
+    """Test that Minkowski with wrong parameter shape raises a ValueError."""
+    with pytest.raises(ValueError, match="inv_cov must be a 1x1 array"):
+        build_neighbor_graph(random_data, 3, metric="minkowski", inv_cov=np.array([[1.0, 2.0]]))
 
 # Test with different search methods
 def test_kd_tree_method(random_data):
