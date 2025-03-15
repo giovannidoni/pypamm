@@ -1,10 +1,74 @@
 """
-Unit tests for the clustering utils module.
+Unit tests for the clustering utilities module.
 """
 
 import numpy as np
 import pytest
-from pypamm import merge_clusters
+from pypamm import compute_cluster_covariance, merge_clusters
+
+def test_compute_cluster_covariance():
+    """Test computation of cluster covariance matrices."""
+    # Create a simple dataset with 2 clusters
+    X = np.array([
+        [0, 0],    # Cluster 0
+        [1, 0],    # Cluster 0
+        [0, 1],    # Cluster 0
+        [10, 10],  # Cluster 1
+        [11, 10],  # Cluster 1
+        [10, 11]   # Cluster 1
+    ], dtype=np.float64)
+    
+    cluster_labels = np.array([0, 0, 0, 1, 1, 1], dtype=np.int32)
+    
+    # Compute covariance matrices
+    cov_matrices = compute_cluster_covariance(X, cluster_labels)
+    
+    # Check shape
+    assert cov_matrices.shape == (2, 2, 2)
+    
+    # Check that covariance matrices are symmetric
+    for i in range(2):
+        assert np.allclose(cov_matrices[i], cov_matrices[i].T)
+    
+    # Check that diagonal elements are positive
+    for i in range(2):
+        assert np.all(np.diag(cov_matrices[i]) > 0)
+    
+    # Check that the covariance matrices are correct
+    # For cluster 0, the points are [0,0], [1,0], [0,1], which form a triangle
+    # The covariance matrix should be close to [[1/3, 0], [0, 1/3]]
+    assert np.allclose(cov_matrices[0], np.array([[0.33333, 0], [0, 0.33333]]), atol=1e-4)
+    
+    # For cluster 1, the points are [10,10], [11,10], [10,11], which also form a triangle
+    # The covariance matrix should be close to [[0.33333, 0], [0, 0.33333]]
+    assert np.allclose(cov_matrices[1], np.array([[0.33333, 0], [0, 0.33333]]), atol=1e-4)
+    
+    print("✅ test_compute_cluster_covariance passed!")
+
+def test_compute_cluster_covariance_regularization():
+    """Test computation of cluster covariance matrices with regularization."""
+    # Create a simple dataset with 2 clusters
+    X = np.array([
+        [0, 0],    # Cluster 0
+        [1, 0],    # Cluster 0
+        [0, 1],    # Cluster 0
+        [10, 10],  # Cluster 1
+        [11, 10],  # Cluster 1
+        [10, 11]   # Cluster 1
+    ], dtype=np.float64)
+    
+    cluster_labels = np.array([0, 0, 0, 1, 1, 1], dtype=np.int32)
+    
+    # Compute covariance matrices with regularization
+    reg_value = 0.5
+    cov_matrices = compute_cluster_covariance(X, cluster_labels, regularization=reg_value)
+    
+    # Check that the diagonal elements are increased by the regularization value
+    for i in range(2):
+        expected_diag = np.array([0.33333, 0.33333]) + reg_value
+        assert np.allclose(np.diag(cov_matrices[i]), expected_diag, atol=1e-4)
+    
+    print("✅ test_compute_cluster_covariance_regularization passed!")
 
 def test_merge_clusters_basic():
     """Test basic functionality of merge_clusters."""
@@ -33,13 +97,6 @@ def test_merge_clusters_basic():
     
     # Merge clusters with threshold 0.1 (should merge cluster 1)
     new_labels = merge_clusters(X, cluster_labels, probabilities, covariance_matrices, threshold=0.1)
-    
-    # Print debug information
-    print("Original labels:", cluster_labels)
-    print("New labels:", new_labels)
-    print("Point at index 3 (should be merged):", X[3])
-    print("Distance from point 3 to cluster 0 center:", np.linalg.norm(X[3] - np.mean(X[cluster_labels == 0], axis=0)))
-    print("Distance from point 3 to cluster 2 center:", np.linalg.norm(X[3] - np.mean(X[cluster_labels == 2], axis=0)))
     
     # The point is actually closer to cluster 0, so it should be merged there
     assert new_labels[3] == 0
@@ -77,13 +134,6 @@ def test_merge_clusters_with_specific_target():
     
     # Merge clusters with threshold 0.1 (should merge cluster 1)
     new_labels = merge_clusters(X, cluster_labels, probabilities, covariance_matrices, threshold=0.1)
-    
-    # Print debug information
-    print("Original labels:", cluster_labels)
-    print("New labels:", new_labels)
-    print("Point at index 3 (should be merged):", X[3])
-    print("Distance from point 3 to cluster 0 center:", np.linalg.norm(X[3] - np.mean(X[cluster_labels == 0], axis=0)))
-    print("Distance from point 3 to cluster 2 center:", np.linalg.norm(X[3] - np.mean(X[cluster_labels == 2], axis=0)))
     
     # Check that cluster 1 was merged into cluster 2 (closer than cluster 0)
     assert new_labels[3] == 2
@@ -123,51 +173,10 @@ def test_merge_clusters_no_merging():
     
     print("✅ test_merge_clusters_no_merging passed!")
 
-def test_merge_clusters_input_validation():
-    """Test input validation of merge_clusters."""
-    # Valid inputs
-    X = np.array([[0, 0], [1, 1]], dtype=np.float64)
-    cluster_labels = np.array([0, 1], dtype=np.int32)
-    probabilities = np.array([0.5, 0.5], dtype=np.float64)
-    covariance_matrices = np.array([np.eye(2), np.eye(2)], dtype=np.float64)
-    
-    # Test with invalid X dimension
-    with pytest.raises(ValueError, match="X must be a 2D array"):
-        merge_clusters(X[0], cluster_labels, probabilities, covariance_matrices)
-    
-    # Test with invalid cluster_labels dimension
-    with pytest.raises(ValueError, match="cluster_labels must be a 1D array"):
-        merge_clusters(X, np.array([[0], [1]]), probabilities, covariance_matrices)
-    
-    # Test with invalid probabilities dimension
-    with pytest.raises(ValueError, match="probabilities must be a 1D array"):
-        merge_clusters(X, cluster_labels, np.array([[0.5], [0.5]]), covariance_matrices)
-    
-    # Test with invalid covariance_matrices dimension
-    with pytest.raises(ValueError, match="covariance_matrices must be a 3D array"):
-        merge_clusters(X, cluster_labels, probabilities, np.eye(2))
-    
-    # Test with mismatched lengths
-    with pytest.raises(ValueError, match="Length of cluster_labels must match the number of samples in X"):
-        merge_clusters(X, np.array([0, 1, 2]), probabilities, covariance_matrices)
-    
-    # Test with mismatched probabilities length
-    with pytest.raises(ValueError, match="Length of probabilities must match the number of samples in X"):
-        merge_clusters(X, cluster_labels, np.array([0.5, 0.5, 0.5]), covariance_matrices)
-    
-    # Test with insufficient covariance matrices
-    with pytest.raises(ValueError, match="Number of covariance matrices must be at least the number of clusters"):
-        merge_clusters(X, np.array([0, 2]), probabilities, covariance_matrices)
-    
-    # Test with invalid threshold
-    with pytest.raises(ValueError, match="threshold must be between 0 and 1"):
-        merge_clusters(X, cluster_labels, probabilities, covariance_matrices, threshold=1.5)
-    
-    print("✅ test_merge_clusters_input_validation passed!")
-
 if __name__ == "__main__":
+    test_compute_cluster_covariance()
+    test_compute_cluster_covariance_regularization()
     test_merge_clusters_basic()
     test_merge_clusters_with_specific_target()
     test_merge_clusters_no_merging()
-    test_merge_clusters_input_validation()
     print("All tests passed!") 

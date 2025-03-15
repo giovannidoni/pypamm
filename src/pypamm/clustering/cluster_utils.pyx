@@ -3,11 +3,67 @@
 
 import numpy as np
 cimport numpy as np
-from libc.math cimport log, exp
+from libc.math cimport sqrt, log, exp
+from cython.parallel import prange
 from pypamm.distance_metrics cimport dist_mahalanobis
 
 # ------------------------------------------------------------------------------
-# 1. Log-Sum-Exp for Cluster Merging (Step 3)
+# 1. Cluster Covariance Computation
+# ------------------------------------------------------------------------------
+cpdef np.ndarray[np.float64_t, ndim=3] compute_cluster_covariance(
+    np.ndarray[np.float64_t, ndim=2] X,
+    np.ndarray[np.int32_t, ndim=1] cluster_labels
+):
+    """
+    Computes covariance matrices for each cluster.
+
+    Parameters:
+    - X: (N x D) NumPy array of data points.
+    - cluster_labels: (N,) array of cluster assignments.
+
+    Returns:
+    - cov_matrices: (num_clusters x D x D) covariance matrices.
+    """
+    cdef Py_ssize_t N = X.shape[0]
+    cdef Py_ssize_t D = X.shape[1]
+    cdef Py_ssize_t num_clusters = np.max(cluster_labels) + 1
+    cdef Py_ssize_t i, j, k
+    cdef Py_ssize_t cluster_id
+
+    # Initialize covariance matrices
+    cdef np.ndarray[np.float64_t, ndim=3] cov_matrices = np.zeros((num_clusters, D, D), dtype=np.float64)
+    cdef np.ndarray[np.int32_t, ndim=1] cluster_sizes = np.zeros(num_clusters, dtype=np.int32)
+
+    # Compute mean vectors
+    cdef np.ndarray[np.float64_t, ndim=2] cluster_means = np.zeros((num_clusters, D), dtype=np.float64)
+    
+    for i in range(N):
+        cluster_id = cluster_labels[i]
+        cluster_means[cluster_id] += X[i]
+        cluster_sizes[cluster_id] += 1
+    
+    for i in range(num_clusters):
+        if cluster_sizes[i] > 0:
+            cluster_means[i] /= cluster_sizes[i]  # Normalize means
+
+    # Compute diagonal covariance matrices (variances along each dimension)
+    for i in range(N):
+        cluster_id = cluster_labels[i]
+        for j in range(D):
+            # Only compute diagonal elements (variances)
+            cov_matrices[cluster_id, j, j] += (X[i, j] - cluster_means[cluster_id, j]) ** 2
+    
+    # Normalize
+    for i in range(num_clusters):
+        if cluster_sizes[i] > 1:
+            # Apply Bessel's correction
+            for j in range(D):
+                cov_matrices[i, j, j] /= (cluster_sizes[i] - 1)
+
+    return cov_matrices
+
+# ------------------------------------------------------------------------------
+# 2. Log-Sum-Exp for Cluster Merging
 # ------------------------------------------------------------------------------
 cdef double logsumexp(np.ndarray[np.float64_t, ndim=1] arr):
     """
@@ -17,9 +73,8 @@ cdef double logsumexp(np.ndarray[np.float64_t, ndim=1] arr):
     cdef double max_val = np.max(arr)
     return max_val + log(np.sum(np.exp(arr - max_val)))
 
-
 # ------------------------------------------------------------------------------
-# 2. Cluster Merging (Step 4)
+# 3. Cluster Merging
 # ------------------------------------------------------------------------------
 cpdef np.ndarray[np.int32_t, ndim=1] merge_clusters(
     np.ndarray[np.float64_t, ndim=2] X,
@@ -76,9 +131,8 @@ cpdef np.ndarray[np.int32_t, ndim=1] merge_clusters(
 
     return new_labels
 
-
 # ------------------------------------------------------------------------------
-# 3. Helper Function: Find Nearest Cluster
+# 4. Helper Function: Find Nearest Cluster
 # ------------------------------------------------------------------------------
 cdef int _find_nearest_cluster(
     int i,
@@ -136,4 +190,4 @@ cdef int _find_nearest_cluster(
             min_dist = d
             best_cluster = c2
 
-    return best_cluster
+    return best_cluster 
