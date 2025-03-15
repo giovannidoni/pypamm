@@ -12,7 +12,13 @@ __all__ = [
     'compute_cluster_covariance',
     'merge_clusters',
     'quick_shift', 
-    'build_mst'
+    'build_mst',
+    # Density module
+    'gauss_prepare',
+    'compute_kde',
+    'kde_cutoff',
+    'kde_bootstrap_error',
+    'kde_output'
 ]
 
 # Import the modules
@@ -24,3 +30,12 @@ from pypamm.quick_shift import quick_shift_clustering
 from pypamm.clustering.cluster_utils_wrapper import compute_cluster_covariance, merge_clusters
 from pypamm.quick_shift_wrapper import quick_shift
 from pypamm.mst_wrapper import build_mst
+
+# Import density module
+from pypamm.density import (
+    gauss_prepare,
+    compute_kde,
+    kde_cutoff,
+    kde_bootstrap_error,
+    kde_output
+)

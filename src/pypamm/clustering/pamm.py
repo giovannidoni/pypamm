@@ -77,7 +77,7 @@ class PAMMCluster:
         cluster_covariances = np.array([np.eye(D) for _ in range(len(cluster_centers))])
         return cluster_labels, prob
 
-    def fit(self, X: ArrayLike, single_iteration: bool = False) -> NDArray[np.int32]:
+    def fit(self, X: ArrayLike, single_iteration: bool = False) -> Union[NDArray[np.int32], Tuple[NDArray[np.int32], NDArray[np.float64]]]:
         """
         Run the full PAMM clustering pipeline.
         
@@ -92,13 +92,15 @@ class PAMMCluster:
         -------
         labels : array, shape (n_samples,)
             Cluster assignments for each data point.
+        probabilities : array, shape (n_samples,), optional
+            Probability values for each data point (only returned if single_iteration=True).
         """
         X = np.asarray(X, dtype=np.float64)
         N, D = X.shape
 
         # Step 1: Run a single iteration if bootstrapping is disabled
         if single_iteration or not self.bootstrap:
-            return self._single_run(X)[0]  # Return cluster labels from a single clustering iteration
+            return self._single_run(X)  # Return (cluster_labels, probabilities) tuple
 
         # Step 2: Bootstrap multiple clusterings
         boot_results = Parallel(n_jobs=self.n_jobs)(

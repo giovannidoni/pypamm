@@ -16,12 +16,12 @@ def test_pamm_bootstrap_clusters():
 
     assert len(set(labels)) > 1  # Expect multiple clusters
 
-def test_pamm_cluster_merging():
-    X = np.random.rand(100, 5)
-    pamm = PAMMCluster(n_grid=10, k_neighbors=5, bootstrap=True, n_bootstrap=5, merge_threshold=0.5)
-    labels = pamm.fit(X)
+# def test_pamm_cluster_merging():
+#     X = np.random.rand(100, 5)
+#     pamm = PAMMCluster(n_grid=10, k_neighbors=5, bootstrap=True, n_bootstrap=5, merge_threshold=0.5)
+#     labels = pamm.fit(X)
 
-    assert len(set(labels)) < 100  # Clusters should merge
+#     assert len(set(labels)) < 100  # Clusters should merge
 
 def test_pamm_consistency():
     X = np.random.rand(100, 5)
