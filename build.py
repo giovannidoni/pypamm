@@ -13,19 +13,19 @@ def build(setup_kwargs):
             "pypamm.distance_metrics",
             ["src/pypamm/distance_metrics.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math"],
+            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
         ),
         Extension(
             "pypamm.grid_selection",
             ["src/pypamm/grid_selection.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math"],
+            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
         ),
         Extension(
             "pypamm.neighbor_graph",
             ["src/pypamm/neighbor_graph.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math"],
+            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
         )
     ]
     
@@ -64,19 +64,19 @@ if __name__ == "__main__":
             "pypamm.distance_metrics",
             ["src/pypamm/distance_metrics.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math"],
+            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
         ),
         Extension(
             "pypamm.grid_selection",
             ["src/pypamm/grid_selection.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math"],
+            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
         ),
         Extension(
             "pypamm.neighbor_graph",
             ["src/pypamm/neighbor_graph.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O3", "-ffast-math"],
+            extra_compile_args=["-O3", "-ffast-math", "-Wno-unreachable-code"],
         )
     ]
     

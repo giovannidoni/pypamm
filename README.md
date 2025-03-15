@@ -65,12 +65,24 @@ poetry install
 poetry run pytest
 ```
 
+### Continuous Integration
+
+PyPAMM uses GitHub Actions for continuous integration and deployment:
+
+- **Testing**: Automatically runs tests on multiple Python versions and operating systems
+- **Building**: Builds wheels for different platforms using cibuildwheel
+- **Publishing**: Automatically publishes releases to PyPI when a new tag is pushed
+
+For more information about the CI/CD workflows, see the [GitHub Actions README](.github/README.md).
+
 ### Project Structure
 
 - `src/pypamm/`: Core package code
   - `grid_selection.pyx`: Min-max grid selection algorithm
   - `neighbor_graph.pyx`: K-nearest neighbor graph construction
+  - `distance_metrics.pyx`: Various distance metrics implementations
 - `tests/`: Unit tests
+- `.github/workflows/`: CI/CD workflows
 - `example.py`: Example usage
 
 ## License
