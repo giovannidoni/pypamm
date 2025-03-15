@@ -58,7 +58,7 @@ def build_knn_graph(X, k, metric="euclidean", inv_cov=None, include_self=False, 
     
     return indices.astype(np.int32), distances.astype(np.float64)
 
-def build_neighbor_graph(X, k, inv_cov=None, metric="euclidean", method="brute_force", graph_type="knn"):
+def build_neighbor_graph(X, k, inv_cov=None, metric="euclidean", method="brute_force", graph_type="gabriel"):
     """
     Build a Neighbor Graph using a specified distance metric.
     
@@ -68,7 +68,7 @@ def build_neighbor_graph(X, k, inv_cov=None, metric="euclidean", method="brute_f
     - inv_cov: (D x D) inverse covariance matrix for Mahalanobis distance (only needed for Mahalanobis and Minkowski)
     - metric: "euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski"
     - method: "brute_force" (default) or "kd_tree" for faster search
-    - graph_type: "knn" (default) or "gabriel" to compute Gabriel Graph edges
+    - graph_type: "gabriel" (default) or "knn" to compute k-nearest neighbor edges
 
     Returns:
     - adjacency_list: List of lists, where each inner list contains tuples of (neighbor_index, distance)

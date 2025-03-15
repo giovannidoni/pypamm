@@ -165,7 +165,7 @@ cpdef object build_neighbor_graph(
     object inv_cov=None,
     str metric="euclidean",
     str method="brute_force",
-    str graph_type="knn"
+    str graph_type="gabriel"
 ):
     """
     Build a Neighbor Graph using a specified distance metric.
@@ -176,7 +176,7 @@ cpdef object build_neighbor_graph(
     - inv_cov: (D x D) inverse covariance matrix for Mahalanobis distance (only needed for Mahalanobis and Minkowski)
     - metric: "euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski"
     - method: "brute_force" (default) or "kd_tree" for faster search
-    - graph_type: "knn" (default) or "gabriel" to compute Gabriel Graph edges
+    - graph_type: "gabriel" (default) or "knn" to compute k-nearest neighbor edges
 
     Returns:
     - adjacency_list: sparse csr_matrix where adjacency_list[i, j] contains distance value if edge exists
