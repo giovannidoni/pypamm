@@ -1,34 +1,54 @@
 # cython: language_level=3, boundscheck=False, wraparound=False, cdivision=True
 import numpy as np
 cimport numpy as np
-from libc.math cimport exp, sqrt, M_PI
+from libc.math cimport sqrt
+from scipy.linalg.cython_blas cimport dgemm
+from scipy.linalg import eigh, inv
+
 
 # -----------------------------------------------------------------------------
 # 1️) Gaussian Parameter Preparation
 # -----------------------------------------------------------------------------
 cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
     """
-    Computes mean and covariance for Gaussian KDE.
+    Computes mean, covariance, and inverse covariance for KDE.
+
+    Parameters:
+    - X: (N x D) NumPy array of data points.
+
+    Returns:
+    - mean: (D,) Mean vector.
+    - cov: (D x D) Covariance matrix.
+    - inv_cov: (D x D) Inverted covariance matrix.
+    - eigvals: (D,) Eigenvalues of the covariance matrix.
     """
     cdef int N = X.shape[0]
     cdef int D = X.shape[1]
     
+    # Compute mean
     cdef np.ndarray[np.float64_t, ndim=1] mean = np.mean(X, axis=0)
+    
+    # Compute covariance matrix
     cdef np.ndarray[np.float64_t, ndim=2] cov = np.cov(X, rowvar=False)
-
-    return mean, cov
+    
+    # Compute inverse covariance matrix
+    cdef np.ndarray[np.float64_t, ndim=2] inv_cov = inv(cov)  # Use SciPy's stable inverse
+    
+    # Compute eigenvalues of covariance
+    cdef np.ndarray[np.float64_t, ndim=1] eigvals, eigvecs = eigh(cov)
+    
+    return mean, cov, inv_cov, eigvals
 
 # -----------------------------------------------------------------------------
 # 2️) KDE Computation
 # -----------------------------------------------------------------------------
-cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, ndim=2] grid, double bandwidth):
+cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, ndim=2] grid):
     """
-    Computes Kernel Density Estimation (KDE) on given grid points.
+    Computes Kernel Density Estimation (KDE) with covariance-based adaptive bandwidth.
 
     Parameters:
     - X: (N, D) Data points.
     - grid: (G, D) Grid points where KDE is evaluated.
-    - bandwidth: Bandwidth parameter for KDE.
 
     Returns:
     - density: (G,) KDE density values at each grid point.
@@ -37,16 +57,23 @@ cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, n
     cdef int D = X.shape[1]
     cdef int G = grid.shape[0]
 
+    # Compute covariance-based bandwidth
+    mean, cov, inv_cov, eigvals = gauss_prepare(X)
+    
+    # Compute Mahalanobis KDE
     cdef np.ndarray[np.float64_t, ndim=1] density = np.zeros(G, dtype=np.float64)
-    cdef double norm_factor = (1 / (sqrt(2 * M_PI) * bandwidth)) ** D
+    cdef double bandwidth = np.mean(sqrt(eigvals))  # Adaptive bandwidth scaling
+    cdef double norm_factor = (1 / (sqrt(2 * np.pi) * bandwidth)) ** D
     
     cdef int i, j
     cdef double dist_sq, weight
 
     for i in range(G):
         for j in range(N):
-            dist_sq = np.sum((grid[i] - X[j]) ** 2)
-            weight = exp(-0.5 * dist_sq / (bandwidth ** 2))
+            # Compute Mahalanobis distance
+            diff = grid[i] - X[j]
+            dist_sq = np.dot(diff, np.dot(inv_cov, diff))  # Mahalanobis distance
+            weight = np.exp(-0.5 * dist_sq / (bandwidth ** 2))
             density[i] += weight
         
         density[i] *= norm_factor / N
@@ -118,4 +145,3 @@ cpdef kde_output(np.ndarray[np.float64_t, ndim=1] density, np.ndarray[np.float64
     cdef np.ndarray[np.float64_t, ndim=1] rer = std_kde / (density + 1e-8)  # Avoid division by zero
 
     return prb, aer, rer
-    
