@@ -241,3 +241,4 @@ def test_merge_clusters_numerical_stability():
     
     # Verify all clusters were merged
     assert len(np.unique(new_labels_high)) < 3, "Some clusters should be merged with high threshold"
+
