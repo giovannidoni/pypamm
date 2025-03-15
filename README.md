@@ -109,6 +109,38 @@ poetry run pytest
 - `tests/`: Unit tests
 - `.github/workflows/`: CI/CD workflows
 
+### Code Formatting and Linting
+
+This project uses [Ruff](https://github.com/astral-sh/ruff) for code formatting and linting, configured with a line length of 120 characters.
+
+We use [pre-commit](https://pre-commit.com/) to automatically run Ruff before each commit. To set up pre-commit:
+
+1. Install the development dependencies:
+   ```bash
+   poetry install --with dev
+   ```
+
+2. Install the pre-commit hooks:
+   ```bash
+   poetry run pre-commit install
+   ```
+
+3. Now, Ruff will automatically format and lint your code before each commit.
+
+You can also run the hooks manually on all files:
+```bash
+poetry run pre-commit run --all-files
+```
+
+Or run Ruff directly:
+```bash
+# Format code
+poetry run ruff format .
+
+# Lint code
+poetry run ruff check --fix .
+```
+
 ## Continuous Integration and Deployment
 
 PyPAMM uses GitHub Actions for continuous integration and deployment.

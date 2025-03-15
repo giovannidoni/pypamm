@@ -12,7 +12,7 @@ components:
     min_coords: [0, 0]
     max_coords: [10, 10]
     cluster_scale: 0.1  # Small clusters at each grid point
-    
+
   # Add some noise
   - type: noise
     n_points: 200
@@ -23,4 +23,4 @@ components:
 description: Regular grid of points with some noise, suitable for testing grid selection algorithms
 
 # Custom component type 'grid' implementation
-# This will be handled specially in the data generator 
+# This will be handled specially in the data generator

@@ -36,12 +36,12 @@ cpdef np.ndarray[np.float64_t, ndim=3] compute_cluster_covariance(
 
     # Compute mean vectors
     cdef np.ndarray[np.float64_t, ndim=2] cluster_means = np.zeros((num_clusters, D), dtype=np.float64)
-    
+
     for i in range(N):
         cluster_id = cluster_labels[i]
         cluster_means[cluster_id] += X[i]
         cluster_sizes[cluster_id] += 1
-    
+
     for i in range(num_clusters):
         if cluster_sizes[i] > 0:
             cluster_means[i] /= cluster_sizes[i]  # Normalize means
@@ -52,7 +52,7 @@ cpdef np.ndarray[np.float64_t, ndim=3] compute_cluster_covariance(
         for j in range(D):
             # Only compute diagonal elements (variances)
             cov_matrices[cluster_id, j, j] += (X[i, j] - cluster_means[cluster_id, j]) ** 2
-    
+
     # Normalize
     for i in range(num_clusters):
         if cluster_sizes[i] > 1:
@@ -114,7 +114,7 @@ cpdef np.ndarray[np.int32_t, ndim=1] merge_clusters(
         mask = cluster_labels == c1
         if np.any(mask):
             cluster_probs[c1] = np.sum(prob[mask]) / np.sum(prob)
-    
+
     # Identify weak clusters to merge
     for c1 in range(num_clusters):
         if cluster_probs[c1] < threshold:
@@ -122,7 +122,7 @@ cpdef np.ndarray[np.int32_t, ndim=1] merge_clusters(
 
     # Create a copy of the labels to avoid modifying during iteration
     new_labels = cluster_labels.copy()
-    
+
     # Merge weak clusters
     for i in range(N):
         c1 = cluster_labels[i]
@@ -163,31 +163,31 @@ cdef int _find_nearest_cluster(
     cdef np.ndarray cluster_indices_np
     cdef np.ndarray[np.float64_t, ndim=1] center
     cdef double[::1] x_i = X[i]
-    
+
     # Skip if the cluster doesn't need merging
     c1 = cluster_labels[i]
     if not mergeornot[c1]:
         return c1
-    
+
     # Calculate distance to each cluster center
     for c2 in range(num_clusters):
         # Skip the current cluster and other clusters that need merging
         if c2 == c1 or mergeornot[c2]:
             continue
-            
+
         # Get points in this cluster
         cluster_indices_np = np.where(cluster_labels == c2)[0]
         if len(cluster_indices_np) == 0:
             continue
-            
+
         # Calculate cluster center
         center = np.mean(X[cluster_indices_np], axis=0)
-        
+
         # Calculate distance to center using the cluster's covariance
         d = dist_mahalanobis(x_i, center, cluster_covariances[c2])
-        
+
         if d < min_dist:
             min_dist = d
             best_cluster = c2
 
-    return best_cluster 
+    return best_cluster

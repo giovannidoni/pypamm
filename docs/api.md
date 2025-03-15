@@ -112,4 +112,4 @@ Returns a function that computes the specified distance metric.
 
 ## Note
 
-This API reference is a placeholder. For more detailed information about each function, please refer to the docstrings in the source code. 
+This API reference is a placeholder. For more detailed information about each function, please refer to the docstrings in the source code.

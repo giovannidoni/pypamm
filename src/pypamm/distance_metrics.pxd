@@ -47,4 +47,4 @@ cdef double dist_minkowski(
 ) except? -1 nogil
 
 # Declare the internal function to get a distance function
-cdef dist_func_t _get_distance_function(str metric) except * 
+cdef dist_func_t _get_distance_function(str metric) except *

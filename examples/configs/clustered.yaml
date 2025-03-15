@@ -9,15 +9,15 @@ components:
     n_points: 200
     center: [2, 2]
     scale: 0.5
-    
+
   - type: cluster
     n_points: 200
     center: [7, 7]
     scale: 0.5
-    
+
   - type: cluster
     n_points: 200
     center: [5, 2]
     scale: 0.5
 
-description: Three well-separated Gaussian clusters for basic clustering examples 
+description: Three well-separated Gaussian clusters for basic clustering examples

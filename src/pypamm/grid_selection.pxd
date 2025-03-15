@@ -13,4 +13,4 @@ cpdef object select_grid_points(
     int ngrid,
     str metric = *,
     object inv_cov = *
-) 
+)

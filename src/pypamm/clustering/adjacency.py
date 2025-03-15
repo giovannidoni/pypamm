@@ -1,15 +1,10 @@
 import numpy as np
-from typing import Tuple, List, Optional
-from numpy.typing import NDArray, ArrayLike
+from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 
-def merge(
-    adj: NDArray[np.float64], 
-    ic: NDArray[np.int32], 
-    thresh: float, 
-    N: int
-) -> NDArray[np.int32]:
+
+def merge(adj: NDArray[np.float64], ic: NDArray[np.int32], thresh: float, N: int) -> NDArray[np.int32]:
     """
     Efficiently merges clusters based on adjacency matrix.
 
@@ -45,11 +40,10 @@ def merge(
 
     return new_labels
 
+
 def compute_adjacency(
-    prob: NDArray[np.float64], 
-    clus: NDArray[np.int32], 
-    boot: Optional[NDArray[np.int32]] = None
-) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+    prob: NDArray[np.float64], clus: NDArray[np.int32], boot: NDArray[np.int32] | None = None
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """
     Compute adjacency matrix between clusters based on probability distributions.
 
@@ -77,7 +71,7 @@ def compute_adjacency(
 
     # Compute probability mass for each cluster
     for i, c in enumerate(unique_clusters):
-        mask = (clus == c)
+        mask = clus == c
         pks[i] = np.sum(prob[mask])
 
     # Normalize probability masses
@@ -92,12 +86,12 @@ def compute_adjacency(
                 # Compute overlap between clusters
                 ci = unique_clusters[i]
                 cj = unique_clusters[j]
-                mask_i = (clus == ci)
-                mask_j = (clus == cj)
-                
+                mask_i = clus == ci
+                mask_j = clus == cj
+
                 # Compute overlap as minimum of probability masses
                 overlap = min(np.sum(prob[mask_i]), np.sum(prob[mask_j]))
-                
+
                 # Normalize by total probability
                 adj[i, j] = overlap / np.sum(prob)
                 adj[j, i] = adj[i, j]  # Symmetric matrix

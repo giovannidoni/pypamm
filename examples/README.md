@@ -73,4 +73,4 @@ These examples require the following dependencies (automatically installed with 
 
 ## Additional Resources
 
-For more information about the PyPAMM package and its algorithms, please refer to the main documentation in the repository's README file. 
+For more information about the PyPAMM package and its algorithms, please refer to the main documentation in the repository's README file.

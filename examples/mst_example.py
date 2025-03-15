@@ -13,28 +13,31 @@ MSTs are useful for:
 - Outlier detection
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 from pypamm import build_mst, select_grid_points
 
 # Set random seed for reproducibility
 np.random.seed(42)
+
 
 # Generate a synthetic dataset with multiple clusters
 def generate_clustered_data(n_samples=300, n_clusters=3):
     """Generate synthetic clustered data."""
     centers = np.random.rand(n_clusters, 2) * 10
     data = []
-    
+
     # Generate points around each center
     points_per_cluster = n_samples // n_clusters
     for i in range(n_clusters):
         cluster_points = np.random.randn(points_per_cluster, 2) * 0.5 + centers[i]
         data.append(cluster_points)
-    
+
     # Combine all clusters
     X = np.vstack(data)
     return X
+
 
 # Generate data
 X = generate_clustered_data(n_samples=300, n_clusters=3)
@@ -56,22 +59,22 @@ metrics = ["euclidean", "manhattan", "chebyshev"]
 for i, metric in enumerate(metrics):
     # Build the MST
     mst_edges = build_mst(X, metric=metric)
-    
+
     # Plot the results
-    plt.subplot(2, 2, i+2)
-    
+    plt.subplot(2, 2, i + 2)
+
     # Plot the points
     plt.scatter(X[:, 0], X[:, 1], s=30)
-    
+
     # Plot the MST edges
     for edge in mst_edges:
         u, v = int(edge[0]), int(edge[1])
-        plt.plot([X[u, 0], X[v, 0]], [X[u, 1], X[v, 1]], 'k-', alpha=0.5)
-    
+        plt.plot([X[u, 0], X[v, 0]], [X[u, 1], X[v, 1]], "k-", alpha=0.5)
+
     plt.title(f"MST with {metric.capitalize()} Distance")
     plt.xlabel("X")
     plt.ylabel("Y")
-    
+
     # Print some statistics
     total_weight = sum(edge[2] for edge in mst_edges)
     avg_edge_weight = total_weight / len(mst_edges)
@@ -102,8 +105,8 @@ grid_indices, grid_points = select_grid_points(X_large, ngrid=20)
 
 # Plot grid points
 plt.subplot(1, 3, 2)
-plt.scatter(X_large[:, 0], X_large[:, 1], s=10, alpha=0.2, color='gray')
-plt.scatter(grid_points[:, 0], grid_points[:, 1], s=30, color='red')
+plt.scatter(X_large[:, 0], X_large[:, 1], s=10, alpha=0.2, color="gray")
+plt.scatter(grid_points[:, 0], grid_points[:, 1], s=30, color="red")
 plt.title(f"Grid Points\n({grid_points.shape[0]} points)")
 plt.xlabel("X")
 plt.ylabel("Y")
@@ -117,8 +120,7 @@ plt.scatter(grid_points[:, 0], grid_points[:, 1], s=30)
 
 for edge in mst_edges:
     u, v = int(edge[0]), int(edge[1])
-    plt.plot([grid_points[u, 0], grid_points[v, 0]], 
-             [grid_points[u, 1], grid_points[v, 1]], 'k-', alpha=0.7)
+    plt.plot([grid_points[u, 0], grid_points[v, 0]], [grid_points[u, 1], grid_points[v, 1]], "k-", alpha=0.7)
 
 plt.title(f"MST on Grid Points\n({len(mst_edges)} edges)")
 plt.xlabel("X")
@@ -167,4 +169,4 @@ print("- Euclidean: Standard straight-line distance, good for most applications"
 print("- Manhattan: Sum of absolute differences, sensitive to axis alignment")
 print("- Chebyshev: Maximum difference along any dimension, creates more direct paths")
 
-print("\nExample completed successfully!") 
+print("\nExample completed successfully!")

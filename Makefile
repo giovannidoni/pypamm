@@ -82,4 +82,4 @@ help:
 	@echo "test - run tests (depends on install)"
 	@echo "test-v - run tests with verbose output (depends on install)"
 	@echo "run-example - run the example script (depends on install)"
-	@echo "dev - setup development environment" 
+	@echo "dev - setup development environment"

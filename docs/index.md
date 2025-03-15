@@ -40,4 +40,4 @@ poetry run python examples/neighbor_graph_example.py
 poetry run python examples/quick_shift_example.py
 poetry run python examples/mst_example.py
 poetry run python examples/pipeline_example.py
-``` 
+```

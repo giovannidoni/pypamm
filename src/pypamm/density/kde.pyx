@@ -11,40 +11,53 @@ from scipy.linalg import eigh, inv
 # -----------------------------------------------------------------------------
 cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
     """
-    Computes mean, covariance, and inverse covariance for KDE.
+    Computes mean, covariance, bandwidth matrix (Hi), and inverse bandwidth (Hiinv).
 
     Parameters:
-    - X: (N x D) NumPy array of data points.
+    - X: (N, D) NumPy array of data points.
 
     Returns:
     - mean: (D,) Mean vector.
     - cov: (D x D) Covariance matrix.
     - inv_cov: (D x D) Inverted covariance matrix.
     - eigvals: (D,) Eigenvalues of the covariance matrix.
+    - Hi: (D x D) Bandwidth matrix.
+    - Hiinv: (D x D) Inverse bandwidth matrix.
     """
     cdef int N = X.shape[0]
     cdef int D = X.shape[1]
-    
+
     # Compute mean
     cdef np.ndarray[np.float64_t, ndim=1] mean = np.mean(X, axis=0)
-    
+
     # Compute covariance matrix
     cdef np.ndarray[np.float64_t, ndim=2] cov = np.cov(X, rowvar=False)
-    
+
     # Compute inverse covariance matrix
-    cdef np.ndarray[np.float64_t, ndim=2] inv_cov = inv(cov)  # Use SciPy's stable inverse
-    
-    # Compute eigenvalues of covariance
-    cdef np.ndarray[np.float64_t, ndim=1] eigvals, eigvecs = eigh(cov)
-    
-    return mean, cov, inv_cov, eigvals
+    cdef np.ndarray[np.float64_t, ndim=2] inv_cov = np.linalg.inv(cov)  # Stable inversion
+
+    # Compute eigenvalues and eigenvectors of covariance
+    cdef np.ndarray[np.float64_t, ndim=1] eigvals
+    cdef np.ndarray[np.float64_t, ndim=2] eigvecs
+    eigvals, eigvecs = np.linalg.eigh(cov)
+
+    # Compute bandwidth matrix Hi (scaled eigenvalues)
+    cdef np.ndarray[np.float64_t, ndim=2] Hi = np.zeros((D, D), dtype=np.float64)
+    for i in range(D):
+        Hi[i, i] = sqrt(eigvals[i])  # Scale bandwidth by sqrt of eigenvalues
+
+    # Compute inverse bandwidth matrix Hiinv
+    cdef np.ndarray[np.float64_t, ndim=2] Hiinv = np.linalg.inv(Hi)
+
+    return mean, cov, inv_cov, eigvals, Hi, Hiinv
+
 
 # -----------------------------------------------------------------------------
 # 2️) KDE Computation
 # -----------------------------------------------------------------------------
 cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, ndim=2] grid):
     """
-    Computes Kernel Density Estimation (KDE) with covariance-based adaptive bandwidth.
+    Computes Kernel Density Estimation (KDE) with covariance-adaptive bandwidth.
 
     Parameters:
     - X: (N, D) Data points.
@@ -58,25 +71,25 @@ cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, n
     cdef int G = grid.shape[0]
 
     # Compute covariance-based bandwidth
-    mean, cov, inv_cov, eigvals = gauss_prepare(X)
-    
+    mean, cov, inv_cov, eigvals, Hi, Hiinv = gauss_prepare(X)
+
     # Compute Mahalanobis KDE
     cdef np.ndarray[np.float64_t, ndim=1] density = np.zeros(G, dtype=np.float64)
-    cdef double bandwidth = np.mean(sqrt(eigvals))  # Adaptive bandwidth scaling
-    cdef double norm_factor = (1 / (sqrt(2 * np.pi) * bandwidth)) ** D
-    
+    cdef double norm_factor = (1 / (sqrt(2 * np.pi))) ** D
+
     cdef int i, j
     cdef double dist_sq, weight
+    cdef np.ndarray[np.float64_t, ndim=1] diff
 
     for i in range(G):
         for j in range(N):
-            # Compute Mahalanobis distance
-            diff = grid[i] - X[j]
-            dist_sq = np.dot(diff, np.dot(inv_cov, diff))  # Mahalanobis distance
-            weight = np.exp(-0.5 * dist_sq / (bandwidth ** 2))
+            # Compute Mahalanobis distance with bandwidth scaling
+            diff = np.dot(Hiinv, (grid[i] - X[j]))
+            dist_sq = np.dot(diff, diff)  # Mahalanobis distance squared
+            weight = np.exp(-0.5 * dist_sq)
             density[i] += weight
-        
-        density[i] *= norm_factor / N
+
+        density[i] *= norm_factor / (N * np.linalg.det(Hi))  # Adjust normalization
 
     return density
 
@@ -113,12 +126,12 @@ cpdef kde_bootstrap_error(np.ndarray[np.float64_t, ndim=2] X, int n_bootstrap, d
     cdef np.ndarray[np.float64_t, ndim=2] grid = X.copy()  # Evaluate KDE on original points
 
     cdef np.ndarray[np.float64_t, ndim=2] boot_kdes = np.zeros((n_bootstrap, N), dtype=np.float64)
-    
+
     cdef int b, i
     for b in range(n_bootstrap):
         boot_sample = X[np.random.choice(N, N, replace=True)]
         boot_kdes[b] = compute_kde(boot_sample, grid, bandwidth)
-    
+
     cdef np.ndarray[np.float64_t, ndim=1] mean_kde = np.mean(boot_kdes, axis=0)
     cdef np.ndarray[np.float64_t, ndim=1] std_kde = np.std(boot_kdes, axis=0)
 

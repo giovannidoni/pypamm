@@ -18,6 +18,8 @@ joblib = "^1.4.2"
 pytest = "^7.4.0"
 setuptools = "^76.0.0"
 matplotlib = ">=3.7.0,<3.10.0"
+ruff = "^0.11.0"
+pre-commit = "^4.1.0"
 
 [tool.poetry.build]
 script = "build.py"
@@ -26,3 +28,39 @@ generate-setup-file = false
 [build-system]
 requires = ["poetry-core>=1.0.0", "setuptools>=42", "wheel", "Cython==3.0.12", "numpy==2.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+# Enable linting and formatting
+lint.select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+]
+
+# Ignore specific rules
+lint.ignore = ["UP006", "UP035"]
+
+# Line length
+line-length = 120
+
+# Target Python version
+target-version = "py39"
+
+# Exclude files and directories
+exclude = [
+    ".git",
+    ".ruff_cache",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+# Format settings
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["pypamm"]
