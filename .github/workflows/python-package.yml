@@ -32,10 +32,11 @@ jobs:
     
     - name: Install dependencies
       run: |
+        # Ensure exact versions of NumPy and Cython are installed first
+        # This prevents Poetry from installing different versions
+        pip install --upgrade pip
+        pip install numpy==2.0.0 cython==3.0.12
         poetry install
-        # Ensure NumPy and Cython are properly installed with exact versions
-        poetry run pip install --upgrade pip
-        poetry run pip install --upgrade numpy==2.0.0 cython==3.0.12
     
     - name: Run tests
       run: |
@@ -60,8 +61,11 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true
     
-    - name: Build package
+    - name: Install dependencies and build package
       run: |
+        # Install exact versions of NumPy and Cython first
+        pip install --upgrade pip
+        pip install numpy==2.0.0 cython==3.0.12
         poetry build
     
     - name: Upload artifacts
