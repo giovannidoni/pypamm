@@ -72,15 +72,8 @@ def create_extensions():
         ),
         # Clustering modules
         Extension(
-            "pypamm.clustering.cluster_covariance",
-            ["src/pypamm/clustering/cluster_covariance.pyx"],
-            include_dirs=[np.get_include()],
-            extra_compile_args=extra_compile_args,
-            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
-        ),
-        Extension(
-            "pypamm.clustering.utils",
-            ["src/pypamm/clustering/utils.pyx"],
+            "pypamm.clustering.cluster_utils",
+            ["src/pypamm/clustering/cluster_utils.pyx"],
             include_dirs=[np.get_include()],
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
