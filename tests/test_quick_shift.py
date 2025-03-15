@@ -20,7 +20,7 @@ def test_quick_shift_clustering():
     
     # Test different distance metrics
     for metric in ["euclidean", "manhattan", "chebyshev", "cosine", "minkowski"]:
-        idxroot, cluster_centers = quick_shift_clustering(X, prob, ngrid=5, metric=metric)
+        idxroot, cluster_centers = quick_shift_clustering(X, prob, ngrid=5, metric=metric, max_dist=np.inf)
         
         # Check if cluster assignments exist for all points
         assert len(idxroot) == X.shape[0], "Each point must have a cluster assignment."
@@ -30,5 +30,12 @@ def test_quick_shift_clustering():
         
         # Check if the number of clusters is within reasonable bounds
         assert 1 <= len(cluster_centers) <= X.shape[0], "Number of clusters should be between 1 and N."
+    
+    # Test with a distance threshold
+    max_dist = 2.0  # Only connect points within 2.0 distance units
+    idxroot, cluster_centers = quick_shift_clustering(X, prob, ngrid=5, metric="euclidean", max_dist=max_dist)
+    
+    # Check if the number of clusters is reasonable with the distance threshold
+    assert len(cluster_centers) >= 1, "Should have at least one cluster with distance threshold."
     
     print("✅ test_quick_shift_clustering passed!")
