@@ -40,6 +40,13 @@ def build(setup_kwargs):
             include_dirs=[np.get_include()],
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+        ),
+        Extension(
+            "pypamm.quick_shift",
+            ["src/pypamm/quick_shift.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         )
     ]
     
@@ -100,6 +107,13 @@ if __name__ == "__main__":
         Extension(
             "pypamm.neighbor_graph",
             ["src/pypamm/neighbor_graph.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+        ),
+        Extension(
+            "pypamm.quick_shift",
+            ["src/pypamm/quick_shift.pyx"],
             include_dirs=[np.get_include()],
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
