@@ -9,13 +9,13 @@ from pypamm.distance_metrics cimport (
 )
 
 # Helper functions for Union-Find
-cdef int find_root(int v, int[:] parent):
+cdef int find_root(int v, int[:] parent) nogil:
     while parent[v] != v:
         parent[v] = parent[parent[v]]  # Path compression
         v = parent[v]
     return v
 
-cdef void union_sets(int v1, int v2, int[:] parent):
+cdef void union_sets(int v1, int v2, int[:] parent) nogil:
     parent[find_root(v1, parent)] = find_root(v2, parent)
 
 # ------------------------------------------------------------------------------

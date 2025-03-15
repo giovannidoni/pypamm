@@ -45,11 +45,13 @@ def test_build_mst():
         parent = list(range(n))
         
         def find(x):
+            """Find the root of the set containing element x with path compression."""
             if parent[x] != x:
                 parent[x] = find(parent[x])
             return parent[x]
         
         def union(x, y):
+            """Merge the sets containing elements x and y."""
             parent[find(x)] = find(y)
         
         for edge in edges:
@@ -67,6 +69,4 @@ def test_build_mst():
     assert is_connected(edge_list, X.shape[0]), "MST should be connected"
     
     # Check if the MST has no cycles (N-1 edges in a connected graph with N vertices implies no cycles)
-    assert len(edge_list) == X.shape[0] - 1, "MST should have no cycles"
-    
-    print("✅ test_build_mst passed!") 
+    assert len(edge_list) == X.shape[0] - 1, "MST should have no cycles" 
