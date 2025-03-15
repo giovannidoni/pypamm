@@ -49,7 +49,7 @@ The script generates a visualization showing:
 - Grid selection with different grid sizes (10, 20, 50)
 - The selected grid points highlighted in red
 
-![Grid Selection Example](images/grid_selection_example_grid_selection_example.png)
+![Grid Selection Example](images/grid_selection_example.png)
 
 As the grid size (ngrid) increases:
 - More grid cells are created
@@ -121,7 +121,7 @@ The script generates a visualization showing:
 - Points and edges for each graph
 - Statistics about each graph (number of edges, average node degree, graph density)
 
-![Neighbor Graph Example](images/neighbor_graph_example_neighbor_graph_example.png)
+![Neighbor Graph Example](images/neighbor_graph_example.png)
 
 ### When to Use
 
@@ -191,7 +191,7 @@ The script generates a visualization showing:
 - Points colored by cluster assignment
 - Cluster centers marked with stars
 
-![Quick Shift Example](images/quick_shift_example_quick_shift_example.png)
+![Quick Shift Example](images/quick_shift_example.png)
 
 ### When to Use
 
@@ -237,7 +237,7 @@ The script generates visualizations showing:
 - MST with different distance metrics (Euclidean, Manhattan, Chebyshev)
 - MST on grid-selected points for a larger dataset
 
-![MST with Different Metrics](images/mst_example_mst_metrics_example.png)
+![MST with Different Metrics](images/mst_example.png)
 
 ![MST on Grid Points](images/mst_example_mst_grid_example.png)
 
@@ -348,7 +348,7 @@ The script generates a visualization showing:
 3. Gabriel graph on grid points
 4. Quick Shift clustering with MST
 
-![Pipeline Example](images/pipeline_example_pipeline_example.png)
+![Pipeline Example](images/pipeline_example.png)
 
 ### Advantages of this Pipeline
 

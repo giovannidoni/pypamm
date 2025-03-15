@@ -46,7 +46,7 @@ for script in example_scripts:
     # Copy the generated images to the docs/images directory
     for image_file in Path(".").glob("*.png"):
         # Create a new filename based on the script name
-        new_name = f"{script.replace('.py', '')}_{image_file.name}"
+        new_name = f"{script.replace('.py', '')}.png"
         dest_path = images_dir / new_name
         
         # Copy the image
