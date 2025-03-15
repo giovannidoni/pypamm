@@ -3,6 +3,7 @@
 import numpy as np
 cimport numpy as np
 from libc.math cimport sqrt
+from cython.parallel cimport prange
 
 # Declare the public function that will be exposed to Python
 cpdef np.ndarray[np.float64_t, ndim=3] compute_cluster_covariance(

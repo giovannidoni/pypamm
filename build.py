@@ -54,6 +54,13 @@ def create_extensions():
             include_dirs=[np.get_include()],
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+        ),
+        Extension(
+            "pypamm.cluster_covariance",
+            ["src/pypamm/cluster_covariance.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         )
     ]
     
