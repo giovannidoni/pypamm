@@ -71,7 +71,7 @@ def build_neighbor_graph(X, k, inv_cov=None, metric="euclidean", method="brute_f
     - graph_type: "gabriel" (default) or "knn" to compute k-nearest neighbor edges
 
     Returns:
-    - adjacency_list: List of lists, where each inner list contains tuples of (neighbor_index, distance)
+    - A sparse CSR matrix representing the graph adjacency matrix
     """
     # Validate inputs
     N = X.shape[0]

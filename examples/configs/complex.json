@@ -1,0 +1,46 @@
+{
+  "random_seed": 42,
+  "shuffle": true,
+  "components": [
+    {
+      "type": "cluster",
+      "n_points": 250,
+      "center": [
+        2,
+        2
+      ],
+      "scale": 0.5
+    },
+    {
+      "type": "ring",
+      "n_points": 250,
+      "center": [
+        8,
+        2
+      ],
+      "radius": 2,
+      "thickness": 0.2
+    },
+    {
+      "type": "line",
+      "n_points": 250,
+      "start": [
+        1,
+        6
+      ],
+      "end": [
+        6,
+        8
+      ],
+      "thickness": 0.3
+    },
+    {
+      "type": "noise",
+      "n_points": 250,
+      "min": 0,
+      "max": 10,
+      "dimensions": 2
+    }
+  ],
+  "description": "Complex dataset with different shapes (Gaussian cluster, ring, line, and noise) for testing advanced clustering algorithms"
+}
