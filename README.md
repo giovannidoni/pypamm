@@ -32,7 +32,7 @@ The original PAMM method was developed by the Laboratory of Computational Scienc
 
 ### Prerequisites
 
-- Python 3.12 or higher
+- Python 3.9 or higher
 - NumPy 2.0.0 or higher
 - Cython 3.0.0 or higher
 - SciPy 1.12.0 or higher

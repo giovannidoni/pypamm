@@ -15,7 +15,8 @@ def build(setup_kwargs):
     # Add platform-specific flags
     if platform.system() == "Linux":
         # Disable vectorization on Linux to avoid undefined symbol errors
-        extra_compile_args.extend(["-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION", "-fno-vectorize"])
+        # Use -fno-tree-vectorize for GCC
+        extra_compile_args.extend(["-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION", "-fno-tree-vectorize"])
     
     # Define the extension modules
     extensions = [
@@ -74,7 +75,8 @@ if __name__ == "__main__":
     # Add platform-specific flags
     if platform.system() == "Linux":
         # Disable vectorization on Linux to avoid undefined symbol errors
-        extra_compile_args.extend(["-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION", "-fno-vectorize"])
+        # Use -fno-tree-vectorize for GCC
+        extra_compile_args.extend(["-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION", "-fno-tree-vectorize"])
     
     # Build the extensions in place
     from distutils.core import setup
