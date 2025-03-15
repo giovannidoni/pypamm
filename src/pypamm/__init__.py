@@ -1,5 +1,5 @@
 """
-PAMM (Probabilistic Analysis of Molecular Motifs) package.
+PyPAMM (Python Probabilistic Analysis of Molecular Motifs) package.
 """
 
 try:
