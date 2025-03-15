@@ -23,6 +23,8 @@ The original PAMM method was developed by the Laboratory of Computational Scienc
 
 - **Grid Selection**: Implements the min-max algorithm for selecting representative grid points from high-dimensional data
 - **Neighbor Graph Construction**: Builds k-nearest neighbor graphs with various distance metrics
+- **Quick Shift Clustering**: Implements the Quick Shift algorithm for mode-seeking clustering
+- **Minimum Spanning Tree**: Constructs MSTs for efficient data representation and analysis
 - **High Performance**: Core algorithms implemented in Cython for speed
 - **Multiple Distance Metrics**: Supports Euclidean, Manhattan, Chebyshev, Cosine, Mahalanobis, and Minkowski distances
 - **Flexible API**: Simple interface for integration with existing Python workflows
@@ -53,6 +55,31 @@ poetry install
 pip install git+https://github.com/yourusername/pypamm.git
 ```
 
+## Usage Examples
+
+PyPAMM includes several example scripts that demonstrate how to use the various algorithms and functions in the package. These examples are located in the `examples/` directory.
+
+### Running the Examples
+
+```bash
+# From the root directory of the repository
+poetry run python examples/grid_selection_example.py
+poetry run python examples/neighbor_graph_example.py
+poetry run python examples/quick_shift_example.py
+poetry run python examples/mst_example.py
+poetry run python examples/pipeline_example.py
+```
+
+### Available Examples
+
+- **Grid Selection**: Demonstrates how to select a subset of points from a dataset based on a grid
+- **Neighbor Graph**: Shows how to build different types of neighborhood graphs
+- **Quick Shift Clustering**: Illustrates the use of the Quick Shift algorithm for clustering
+- **Minimum Spanning Tree (MST)**: Demonstrates how to build and use MSTs
+- **Complete Pipeline**: Shows how to combine multiple algorithms in a data analysis pipeline
+
+For more detailed information about the examples, see the [Examples Documentation](docs/examples.md).
+
 ## Development
 
 ### Building from Source
@@ -75,6 +102,10 @@ poetry run pytest
   - `grid_selection.pyx`: Min-max grid selection algorithm
   - `neighbor_graph.pyx`: K-nearest neighbor graph construction
   - `distance_metrics.pyx`: Various distance metrics implementations
+  - `quick_shift.pyx`: Quick Shift clustering algorithm
+  - `mst.pyx`: Minimum Spanning Tree construction
+- `examples/`: Example scripts demonstrating package usage
+- `docs/`: Documentation
 - `tests/`: Unit tests
 - `.github/workflows/`: CI/CD workflows
 
@@ -131,6 +162,11 @@ For the PyPI publishing to work, you need to add the following secret to your Gi
 - `PYPI_API_TOKEN`: A PyPI API token with upload permissions
 
 You can add this secret in your GitHub repository settings under "Settings > Secrets and variables > Actions".
+
+## Documentation
+
+- [Examples Documentation](docs/examples.md): Detailed documentation of the example scripts
+- [API Reference](docs/api.md): API reference for the PyPAMM package
 
 ## License
 
