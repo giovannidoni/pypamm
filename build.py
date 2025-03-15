@@ -55,9 +55,17 @@ def create_extensions():
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
+        # Clustering modules
         Extension(
-            "pypamm.cluster_covariance",
-            ["src/pypamm/cluster_covariance.pyx"],
+            "pypamm.clustering.cluster_covariance",
+            ["src/pypamm/clustering/cluster_covariance.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+        ),
+        Extension(
+            "pypamm.clustering.utils",
+            ["src/pypamm/clustering/utils.pyx"],
             include_dirs=[np.get_include()],
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
@@ -99,6 +107,7 @@ if __name__ == "__main__":
     
     # Ensure the output directory exists
     os.makedirs("pypamm", exist_ok=True)
+    os.makedirs("pypamm/clustering", exist_ok=True)
     
     # Import Cython here to ensure it's installed
     from Cython.Build import cythonize
@@ -127,13 +136,20 @@ if __name__ == "__main__":
     
     # Copy the built extensions to the src directory
     for ext in extensions:
-        module_name = ext.name.split(".")[-1]
-        source_path = f"pypamm/{module_name}.*.so"
+        module_parts = ext.name.split(".")
+        if len(module_parts) > 2:  # For submodules like pypamm.clustering.xxx
+            module_name = module_parts[-1]
+            submodule = module_parts[-2]
+            source_path = f"pypamm/{submodule}/{module_name}.*.so"
+            target_dir = f"src/pypamm/{submodule}"
+        else:  # For direct modules like pypamm.xxx
+            module_name = module_parts[-1]
+            source_path = f"pypamm/{module_name}.*.so"
+            target_dir = "src/pypamm"
         
         # Find the built extension file
         built_files = glob.glob(source_path)
         if built_files:
-            target_dir = "src/pypamm"
             source_file = built_files[0]
             target_file = os.path.join(target_dir, os.path.basename(source_file))
             print(f"Copying {source_file} to {target_file}")

@@ -3,7 +3,7 @@ Wrapper functions for the cluster_covariance module.
 """
 
 import numpy as np
-from pypamm.cluster_covariance import compute_cluster_covariance as _compute_cluster_covariance
+from pypamm.clustering.cluster_covariance import compute_cluster_covariance as _compute_cluster_covariance
 
 def compute_cluster_covariance(X, cluster_labels, regularization=None):
     """
