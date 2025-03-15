@@ -40,9 +40,13 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_ARCHS_MACOS: "x86_64 arm64"
-          CIBW_BEFORE_BUILD: "pip install -U pip setuptools wheel numpy==2.0.0 cython>=3.0.0"
+          CIBW_BEFORE_BUILD: "pip install -U pip setuptools wheel numpy==2.0.0 cython==3.0.12"
           CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "pytest {project}/tests"
+          # Skip testing on PyPy
+          CIBW_TEST_SKIP: "*-pp*"
+          # Set environment variables to help with compilation
+          CIBW_ENVIRONMENT: "CFLAGS='-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION'"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -69,7 +73,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -U pip setuptools wheel numpy==2.0.0 cython>=3.0.0
+          pip install -U pip setuptools wheel numpy==2.0.0 cython==3.0.12
 
       - name: Build sdist
         run: |

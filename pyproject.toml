@@ -8,8 +8,8 @@ packages = [{include = "pypamm", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-numpy = "^2.0.0"
-cython = "^3.0.0"
+numpy = "2.0.0"
+cython = "3.0.12"
 scipy = "^1.12.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -21,5 +21,5 @@ script = "build.py"
 generate-setup-file = false
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "setuptools>=42", "wheel", "Cython>=3.0.0", "numpy>=2.0.0"]
+requires = ["poetry-core>=1.0.0", "setuptools>=42", "wheel", "Cython==3.0.12", "numpy==2.0.0"]
 build-backend = "poetry.core.masonry.api"
