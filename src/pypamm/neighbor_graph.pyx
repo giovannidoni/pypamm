@@ -32,8 +32,8 @@ ctypedef struct neighbor_t:
 __all__ = ['build_neighbor_graph', 'build_knn_graph', 'compute_knn_for_point']
 
 # Function to build a k-nearest neighbor graph
-cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric="euclidean", 
-                   object inv_cov=None, bint include_self=False, int n_jobs=1):
+cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric, 
+                   object inv_cov, bint include_self, int n_jobs):
     """
     Build a k-nearest neighbor graph.
     
@@ -162,7 +162,7 @@ cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
 cpdef object build_neighbor_graph(
     np.ndarray[np.float64_t, ndim=2] X,
     int k,
-    np.ndarray[np.float64_t, ndim=2] inv_cov = None,
+    object inv_cov=None,
     str metric="euclidean",
     str method="brute_force",
     str graph_type="knn"
@@ -205,6 +205,7 @@ cpdef object build_neighbor_graph(
     dist_func = _get_distance_function(metric)
     
     # Process inv_cov
+    cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
     if inv_cov is None:
         if metric == "mahalanobis":
             raise ValueError("Must supply inv_cov (D x D) for Mahalanobis.")

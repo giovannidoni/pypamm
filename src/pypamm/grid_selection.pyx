@@ -47,8 +47,10 @@ cpdef object select_grid_points(
     cdef Py_ssize_t D = X_arr.shape[1]
     
     # Get the appropriate distance function and process inv_cov
-    metric_name, inv_cov_arr = get_distance_function(metric, inv_cov, D)
-    cdef dist_func_t dist_func = _get_distance_function(metric_name)
+    cdef object dist_func_wrapper
+    cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
+    dist_func_wrapper, inv_cov_arr = get_distance_function(metric, inv_cov, D)
+    cdef dist_func_t dist_func = _get_distance_function(metric)
     
     # Allocate result arrays
     cdef np.ndarray[np.int32_t, ndim=1] idxgrid = np.empty(ngrid, dtype=np.int32)

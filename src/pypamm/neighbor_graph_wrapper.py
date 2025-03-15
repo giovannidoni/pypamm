@@ -71,18 +71,39 @@ def build_neighbor_graph(X, k, inv_cov=None, metric="euclidean", method="brute_f
     - graph_type: "knn" (default) or "gabriel" to compute Gabriel Graph edges
 
     Returns:
-    - adjacency_list: sparse csr_matrix where adjacency_list[i, j] contains distance value if edge exists
+    - adjacency_list: List of lists, where each inner list contains tuples of (neighbor_index, distance)
     """
+    # Validate inputs
+    N = X.shape[0]
+    D = X.shape[1]
+    
+    # Validate metric
+    valid_metrics = ["euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski"]
+    if metric not in valid_metrics:
+        raise ValueError(f"Unsupported metric '{metric}'. Valid options are: {valid_metrics}")
+    
+    # Validate inv_cov for special metrics
+    if metric == "mahalanobis":
+        if inv_cov is None:
+            raise ValueError("Must supply inv_cov (D x D) for Mahalanobis.")
+        if inv_cov.shape[0] != D or inv_cov.shape[1] != D:
+            raise ValueError(f"inv_cov must be ({D},{D}) for Mahalanobis.")
+    elif metric == "minkowski":
+        if inv_cov is None:
+            raise ValueError("Must supply a 1x1 array with exponent for Minkowski.")
+        if inv_cov.shape[0] != 1 or inv_cov.shape[1] != 1:
+            raise ValueError("For Minkowski distance, inv_cov must be a 1x1 array with param[0,0] = k.")
+    
     # Get the indices and distances
     indices, distances = build_knn_graph(X, k, metric, inv_cov, include_self=False, n_jobs=1)
     
-    # Create a sparse matrix
-    N = X.shape[0]
-    rows = np.repeat(np.arange(N), k)
-    cols = indices.flatten()
-    vals = distances.flatten()
+    # Create a list of lists of tuples (index, distance)
+    adjacency_list = []
     
-    # Create the sparse matrix
-    adj_matrix = csr_matrix((vals, (rows, cols)), shape=(N, N))
+    for i in range(N):
+        neighbors = []
+        for j in range(k):
+            neighbors.append((indices[i, j], distances[i, j]))
+        adjacency_list.append(neighbors)
     
-    return adj_matrix 
+    return adjacency_list 

@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from pypamm.neighbor_graph import build_neighbor_graph
+from pypamm.neighbor_graph_wrapper import build_neighbor_graph
 from pypamm.distance_metrics import get_distance_function
 
 # Fixtures for common test data
@@ -69,16 +69,16 @@ def test_mahalanobis_distance(random_data):
     # Create an identity matrix for simplicity (reduces to Euclidean)
     inv_cov = np.eye(D)
     
-    adjacency_matrix = build_neighbor_graph(
+    adjacency_list = build_neighbor_graph(
         random_data, k, inv_cov=inv_cov, metric="mahalanobis"
     )
     
-    # Check that the matrix has the correct shape
-    assert adjacency_matrix.shape == (len(random_data), len(random_data))
+    # Check that the list has the correct length
+    assert len(adjacency_list) == len(random_data)
     
-    # Check that each row has exactly k non-zero entries
-    for i in range(len(random_data)):
-        assert adjacency_matrix[i].count_nonzero() == k
+    # Check that each point has exactly k neighbors
+    for neighbors in adjacency_list:
+        assert len(neighbors) == k
 
 # Test with Minkowski distance
 def test_minkowski_distance(random_data):
@@ -88,16 +88,16 @@ def test_minkowski_distance(random_data):
     # Create parameter for p=2 (Euclidean)
     p = np.array([[2.0]])
     
-    adjacency_matrix = build_neighbor_graph(
+    adjacency_list = build_neighbor_graph(
         random_data, k, inv_cov=p, metric="minkowski"
     )
     
-    # Check that the matrix has the correct shape
-    assert adjacency_matrix.shape == (len(random_data), len(random_data))
+    # Check that the list has the correct length
+    assert len(adjacency_list) == len(random_data)
     
-    # Check that each row has exactly k non-zero entries
-    for i in range(len(random_data)):
-        assert adjacency_matrix[i].count_nonzero() == k
+    # Check that each point has exactly k neighbors
+    for neighbors in adjacency_list:
+        assert len(neighbors) == k
 
 # Test error handling
 def test_invalid_metric(random_data):

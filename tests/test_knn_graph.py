@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
-from scipy.spatial.distance import cdist
+import scipy.sparse as sp
+from scipy.spatial import distance
 
 # Import the function from the wrapper module
 from pypamm.neighbor_graph_wrapper import build_knn_graph
@@ -113,7 +114,3 @@ def test_empty_data():
     empty_data = np.zeros((0, 3))
     with pytest.raises(ValueError):
         build_knn_graph(empty_data, 1)
-
-if __name__ == "__main__":
-    # Run the tests
-    pytest.main(["-xvs", __file__]) 

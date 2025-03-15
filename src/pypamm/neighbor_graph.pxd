@@ -3,8 +3,8 @@ cimport numpy as np
 from pypamm.distance_metrics cimport dist_func_t
 
 # Declare the public API
-cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric="*", 
-                     object inv_cov=None, bint include_self=False, int n_jobs=1)
+cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric, 
+                     object inv_cov, bint include_self, int n_jobs)
 
 cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
                          np.ndarray[np.int32_t, ndim=2] indices,
@@ -15,8 +15,8 @@ cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
 cpdef object build_neighbor_graph(
     np.ndarray[np.float64_t, ndim=2] X,
     int k,
-    np.ndarray[np.float64_t, ndim=2] inv_cov = None,
-    str metric="*",
-    str method="*",
-    str graph_type="*"
+    object inv_cov=*,
+    str metric=*,
+    str method=*,
+    str graph_type=*
 ) 
