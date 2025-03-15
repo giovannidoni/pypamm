@@ -12,6 +12,12 @@ def build(setup_kwargs):
             ["src/pypamm/grid_selection.pyx"],
             include_dirs=[np.get_include()],
             extra_compile_args=["-O3", "-ffast-math"],
+        ),
+        Extension(
+            "pypamm.neighbor_graph",
+            ["src/pypamm/neighbor_graph.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=["-O3", "-ffast-math"],
         )
     ]
     

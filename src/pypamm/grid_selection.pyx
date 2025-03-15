@@ -8,7 +8,7 @@ from libc.math cimport fabs, sqrt, pow
 #     double f(a, b, mat)
 #   where "mat" can be an inverse covariance or a 1×1 array for Minkowski exponent.
 
-ctypedef double (*dist_func_t)(double[::1], double[::1], double[:, ::1]) nogil
+# dist_func_t is now declared in grid_selection.pxd
 
 # ------------------------------------------------------------------------------
 # 1) Distances that ignore the third parameter

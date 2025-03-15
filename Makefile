@@ -52,11 +52,6 @@ build:
 # Install the project
 install:
 	$(POETRY) install
-
-# Run the example
-run-example:
-	$(POETRY) run python example.py
-
 # Help command
 help:
 	@echo "clean-build - remove build artifacts"

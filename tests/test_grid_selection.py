@@ -145,6 +145,71 @@ def test_ngrid_equals_data_size():
     assert len(idxgrid) == 5
     assert len(np.unique(idxgrid)) == 5  # All indices should be unique
 
+def test_comprehensive_ngrid_equals_data_size():
+    """Comprehensive test for when ngrid equals the number of data points."""
+    # Create a structured dataset with known points
+    data = np.array([
+        [0.0, 0.0],  # Origin
+        [1.0, 0.0],  # Right
+        [0.0, 1.0],  # Top
+        [1.0, 1.0],  # Top-right
+        [0.5, 0.5]   # Center
+    ], dtype=np.float64)
+    
+    # Set a fixed random seed for reproducibility
+    np.random.seed(42)
+    
+    # Select all points
+    idxgrid, Y = select_grid_points(data, 5)
+    
+    # Verify all points were selected
+    assert len(idxgrid) == 5
+    assert len(np.unique(idxgrid)) == 5
+    
+    # Verify that the selected points match the original data
+    selected_points = set(tuple(point) for point in Y)
+    original_points = set(tuple(point) for point in data)
+    assert selected_points == original_points
+    
+    # Verify the order of selection follows the min-max algorithm
+    # The first point is random, then subsequent points should maximize
+    # the minimum distance to previously selected points
+    
+    # Create a copy of the data for tracking
+    remaining_indices = set(range(5))
+    
+    # First point is random (with seed 42)
+    first_idx = idxgrid[0]
+    remaining_indices.remove(first_idx)
+    
+    # For each subsequent point, verify it maximizes the minimum distance
+    for i in range(1, 5):
+        current_idx = idxgrid[i]
+        current_point = data[current_idx]
+        
+        # Calculate the minimum distance from this point to all previously selected points
+        min_dist_selected = float('inf')
+        for j in range(i):
+            prev_idx = idxgrid[j]
+            prev_point = data[prev_idx]
+            dist = np.sum((current_point - prev_point)**2)  # Squared Euclidean
+            min_dist_selected = min(min_dist_selected, dist)
+        
+        # For all other remaining points, calculate their minimum distances
+        for other_idx in remaining_indices - {current_idx}:
+            other_point = data[other_idx]
+            min_dist_other = float('inf')
+            for j in range(i):
+                prev_idx = idxgrid[j]
+                prev_point = data[prev_idx]
+                dist = np.sum((other_point - prev_point)**2)  # Squared Euclidean
+                min_dist_other = min(min_dist_other, dist)
+            
+            # The selected point should have a min distance >= any other remaining point
+            assert min_dist_selected >= min_dist_other - 1e-10  # Allow for numerical precision
+        
+        remaining_indices.remove(current_idx)
+
 def test_single_point_selection():
     """Test selecting a single point."""
     data = np.random.rand(10, 2)
