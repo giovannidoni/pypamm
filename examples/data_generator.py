@@ -18,14 +18,24 @@ from sklearn.manifold import TSNE
 from sklearn.preprocessing import MinMaxScaler
 
 
-def generate_dataset(config_section: str) -> tuple:
+def load_config(config_name: str = "data_config"):
+    """
+    Load the configuration file for the data generator.
+    """
+    config_path = os.path.join(os.path.dirname(__file__), f"{config_name}.yaml")
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+    return config
+
+
+def generate_dataset(config_section: str, config_name: str = "data_config") -> tuple:
     """
     Generate a synthetic dataset for clustering based on parameters from a config section.
 
     Parameters:
     -----------
     config_section : str
-        Identifier for the section in data_config.yaml containing dataset parameters.
+        Identifier for the section in the config file containing dataset parameters.
         The section should include:
         - n_clusters: int, number of clusters to generate
         - n_dimensions: int, dimensionality of the data
@@ -36,6 +46,8 @@ def generate_dataset(config_section: str) -> tuple:
           where 1.0 means all clusters have equal size and 0.0 means one large cluster and the rest are small
         - noise_level: float, fraction of points that are noise (0.0 to 1.0)
         - n_samples: int, total number of data points to generate
+    config_name : str, default="data_config"
+        Name of the configuration file to use (without .yaml extension)
 
     Returns:
     --------
@@ -43,13 +55,11 @@ def generate_dataset(config_section: str) -> tuple:
         Generated dataset with shape (n_samples, n_dimensions), normalized to [0,1] range
     """
     # Load configuration from YAML file
-    config_path = os.path.join(os.path.dirname(__file__), "data_config.yaml")
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
+    config = load_config(config_name)
 
     # Get dataset parameters from the specified section
     if config_section not in config:
-        raise ValueError(f"Section '{config_section}' not found in data_config.yaml")
+        raise ValueError(f"Section '{config_section}' not found in {config_name}.yaml")
 
     dataset_config = config[config_section]
 
@@ -187,9 +197,7 @@ def list_dataset_sections():
     sections : list
         List of section names that can be used for dataset generation
     """
-    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
+    config = load_config()
 
     # Filter sections that have dataset parameters
     for section, params in config.items():
@@ -208,6 +216,8 @@ def plot_clusters(
     alpha=0.8,
     point_size=30,
     random_seed=42,
+    ax=None,
+    plot_kwargs=None,
 ):
     """
     Plot clusters with optional t-SNE dimensionality reduction.
@@ -234,6 +244,10 @@ def plot_clusters(
         Size of points
     random_seed : int, default=42
         Random seed for reproducibility
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to plot on. If None, a new figure and axes will be created.
+    plot_kwargs : dict, optional
+        Additional keyword arguments to pass to the scatter function
 
     Returns:
     --------
@@ -246,6 +260,18 @@ def plot_clusters(
     # Apply t-SNE if needed
     if n_dimensions > 2 and use_tsne:
         print(f"Applying t-SNE to reduce {n_dimensions}D data to 2D for visualization...")
+
+        # For high-dimensional data, first apply PCA to reduce to 50D
+        if n_dimensions > 50:
+            from sklearn.decomposition import PCA
+
+            print(f"  First applying PCA to reduce from {n_dimensions}D to 50D...")
+            start_time = time.time()
+            pca = PCA(n_components=50, random_state=random_seed)
+            X = pca.fit_transform(X)
+            end_time = time.time()
+            print(f"  PCA completed in {end_time - start_time:.2f}s")
+            n_dimensions = 50
 
         # Then apply t-SNE for final 2D visualization
         start_time = time.time()
@@ -265,24 +291,29 @@ def plot_clusters(
         print("Only the first 2 dimensions will be plotted.")
         X_2d = X[:, :2]
 
-    # Create figure
-    fig, ax = plt.subplots(figsize=figsize)
+    # Create figure if ax is not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
+
+    # Set default scatter parameters
+    scatter_kwargs = {"alpha": alpha, "s": point_size, "edgecolors": "w", "linewidths": 0.5}
+
+    # Update with user-provided kwargs if any
+    if plot_kwargs is not None:
+        scatter_kwargs.update(plot_kwargs)
 
     # Plot the data
     if labels is not None:
-        scatter = ax.scatter(
-            X_2d[:, 0], X_2d[:, 1], c=labels, cmap=cmap, alpha=alpha, s=point_size, edgecolors="w", linewidths=0.5
-        )
+        scatter = ax.scatter(X_2d[:, 0], X_2d[:, 1], c=labels, cmap=cmap, **scatter_kwargs)
 
         # Add legend for cluster labels
         legend = ax.legend(*scatter.legend_elements(), loc="upper right", title="Clusters")
         ax.add_artist(legend)
 
-        # Add colorbar
-        cbar = plt.colorbar(scatter, ax=ax)
-        cbar.set_label("Cluster")
     else:
-        ax.scatter(X_2d[:, 0], X_2d[:, 1], alpha=alpha, s=point_size, edgecolors="w", linewidths=0.5)
+        ax.scatter(X_2d[:, 0], X_2d[:, 1], **scatter_kwargs)
 
     # Set title and labels
     if title:
@@ -298,8 +329,9 @@ def plot_clusters(
     # Add grid
     ax.grid(True, alpha=0.3)
 
-    # Adjust layout
-    plt.tight_layout()
+    # Adjust layout if we created the figure
+    if ax is None:
+        plt.tight_layout()
 
     # Save figure if output path provided
     if output_path:

@@ -10,96 +10,20 @@ visualization:
   point_size: 30
   output_dir: "docs/images"
 
-# Dataset configurations
-datasets:
-  # Simple dataset with uniform clusters
-  dataset_default:
-    n_clusters: 4
-    n_dimensions: 2
-    cluster_std: 0.1
-    cluster_uniformity: 1.0
-    population_uniformity: 1.0
-    noise_level: 0.1
-    n_samples: 1000
-    random_seed: 42
-    description: "Default dataset with 4 spherical clusters in 2D"
-
-  # Dataset with non-uniform clusters and populations
-  dataset_mixed_non_uniform:
-    n_clusters: 6
-    n_dimensions: 2
-    cluster_std: 0.1
-    cluster_uniformity: 0.3
-    population_uniformity: 0.3
-    noise_level: 0.1
-    n_samples: 1500
-    random_seed: 42
-    description: "Dataset with both non-uniform shapes and non-uniform populations"
-
-  # Dataset with many small clusters
-  dataset_many_clusters:
-    n_clusters: 10
-    n_dimensions: 2
-    cluster_std: 0.05
-    cluster_uniformity: 1.0
-    population_uniformity: 1.0
-    noise_level: 0.1
-    n_samples: 2000
-    random_seed: 42
-    description: "Dataset with 10 small clusters"
-
-  # High-dimensional dataset
-  dataset_high_dim:
-    n_clusters: 8
-    n_dimensions: 100
-    cluster_std: 0.1
-    cluster_uniformity: 1.0
-    population_uniformity: 1.0
-    noise_level: 0.5
-    n_samples: 2000
-    random_seed: 42
-    description: "High-dimensional dataset with 8 clusters in 100D space"
-
-# Algorithm configurations
-algorithms:
-  # KDE parameters
-  kde:
-    bandwidth: 0.1
-    kernel: "gaussian"
-
-  # Quick-Shift parameters
-  quick_shift:
-    lambda_qs: 1.0
-    max_dist: 0.5
-    ngrid: 100
-    metric: "euclidean"
-
-  # Hierarchical clustering parameters
-  hierarchical:
-    linkage: "ward"
-
-  # DBSCAN parameters
-  dbscan:
-    eps: 0.05
-    min_samples: 10
-
-  # K-means parameters
-  kmeans:
-    n_init: 10
-    max_iter: 300
-    random_state: 42
+datasets: &data
+  - dataset_high_noise
+  - dataset_high_dim_non_uniform
 
 # Example-specific configurations
 examples:
   quick_shift_example:
-    datasets: ["dataset_default", "dataset_mixed_non_uniform"]
-    algorithms: ["hierarchical", "quick_shift"]
-
-  kde_example:
-    datasets: ["dataset_default"]
-    algorithms: ["kde"]
-
-  high_dim_example:
-    datasets: ["dataset_high_dim"]
-    algorithms: ["quick_shift", "kmeans"]
-    use_tsne: true
+    datasets: *data
+    algorithms:
+      hierarchical_clustering:
+        linkage: "ward"
+      quick_shift:
+        bandwidth: 0.1
+        lambda_qs: 1.0
+        max_dist: 0.5
+        ngrid: 100
+        metric: "euclidean"
