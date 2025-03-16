@@ -156,7 +156,7 @@ This workflow runs tests on multiple Python versions and operating systems.
 - Pull requests to `main` branch
 
 **Jobs:**
-- **test**: Runs tests on Ubuntu and macOS with Python 3.9, 3.10, 3.11, and 3.12
+- **test**: Runs tests on Ubuntu and macOS with Python 3.10, 3.11, and 3.12
 - **build**: Builds the package using Poetry and uploads the artifacts
 
 #### 2. Build Wheels (`build-wheels.yml`)
@@ -169,7 +169,7 @@ This workflow builds wheels for different platforms using cibuildwheel.
 - Pull requests to `main` branch
 
 **Jobs:**
-- **build_wheels**: Builds wheels for Ubuntu, Windows, and macOS with Python 3.9, 3.10, 3.11, and 3.12
+- **build_wheels**: Builds wheels for Ubuntu, Windows, and macOS with Python 3.10, 3.11, and 3.12
 - **build_sdist**: Builds a source distribution
 - **publish**: Publishes the built distributions to PyPI (only when a tag is pushed)
 
