@@ -24,6 +24,7 @@ The original PAMM method was developed by the Laboratory of Computational Scienc
 - **Grid Selection**: Implements the min-max algorithm for selecting representative grid points from high-dimensional data
 - **Neighbor Graph Construction**: Builds k-nearest neighbor graphs with various distance metrics
 - **Quick Shift Clustering**: Implements the Quick Shift algorithm for mode-seeking clustering
+  - **Enhanced with Graph-based Optimization**: Significantly faster for large datasets using pre-computed neighbor graphs
 - **Minimum Spanning Tree**: Constructs MSTs for efficient data representation and analysis
 - **High Performance**: Core algorithms implemented in Cython for speed
 - **Multiple Distance Metrics**: Supports Euclidean, Manhattan, Chebyshev, Cosine, Mahalanobis, and Minkowski distances
@@ -66,6 +67,7 @@ PyPAMM includes several example scripts that demonstrate how to use the various 
 poetry run python examples/grid_selection_example.py
 poetry run python examples/neighbor_graph_example.py
 poetry run python examples/quick_shift_example.py
+poetry run python examples/quick_shift_graph_example.py
 poetry run python examples/mst_example.py
 poetry run python examples/pipeline_example.py
 ```
@@ -75,6 +77,7 @@ poetry run python examples/pipeline_example.py
 - **Grid Selection**: Demonstrates how to select a subset of points from a dataset based on a grid
 - **Neighbor Graph**: Shows how to build different types of neighborhood graphs
 - **Quick Shift Clustering**: Illustrates the use of the Quick Shift algorithm for clustering
+  - **Graph-based Quick Shift**: Shows how to use pre-computed neighbor graphs for faster clustering
 - **Minimum Spanning Tree (MST)**: Demonstrates how to build and use MSTs
 - **Complete Pipeline**: Shows how to combine multiple algorithms in a data analysis pipeline
 

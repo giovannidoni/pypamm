@@ -191,3 +191,31 @@ cdef int _find_nearest_cluster(
             best_cluster = c2
 
     return best_cluster
+
+# ------------------------------------------------------------------------------
+# 5. Helper Function: Reindex labels
+# ------------------------------------------------------------------------------
+cpdef np.ndarray[np.int32_t, ndim=1] reindex_clusters(np.ndarray[np.int32_t, ndim=1] cluster_labels):
+    """
+    Ensures cluster labels are contiguous (reindexes clusters).
+
+    Parameters:
+    - cluster_labels: (N,) Cluster assignments.
+
+    Returns:
+    - Updated cluster labels with contiguous numbering.
+    """
+    cdef Py_ssize_t N = cluster_labels.shape[0]
+    cdef Py_ssize_t i
+    cdef np.ndarray[np.int32_t, ndim=1] new_labels = np.copy(cluster_labels)
+
+    # Identify unique cluster labels and map them to contiguous labels
+    unique_clusters = np.unique(new_labels[new_labels >= 0])  # Exclude noise (-1)
+    relabel_map = {old_label: new_label for new_label, old_label in enumerate(unique_clusters)}
+
+    # Apply relabeling
+    for i in range(N):
+        if new_labels[i] >= 0:  # Only reindex valid clusters
+            new_labels[i] = relabel_map[new_labels[i]]
+
+    return new_labels

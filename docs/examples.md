@@ -146,6 +146,7 @@ Quick Shift is a mode-seeking clustering algorithm that:
 - Can find clusters of arbitrary shape
 - Robust to noise and outliers
 - Based on density estimation, which is intuitive
+- **Efficient implementation with graph-based constraints** (new feature)
 
 ### Key Parameters
 
@@ -157,13 +158,16 @@ Quick Shift is a mode-seeking clustering algorithm that:
   - Helps prevent connecting distant clusters
 - **ngrid**: Number of grid points for density estimation
   - Higher values provide more accurate density estimation
+- **neighbor_graph**: Pre-computed neighbor graph (new parameter)
+  - Significantly improves performance for large datasets
+  - Can use any sparse graph (MST, k-NN, Gabriel, etc.)
 
 ### Example Code
 
 ```python
 import numpy as np
 from scipy.stats import gaussian_kde
-from pypamm import quick_shift
+from pypamm import quick_shift, build_neighbor_graph
 
 # Generate data
 X = np.random.rand(600, 2) * 10
@@ -173,13 +177,25 @@ kde = gaussian_kde(X.T)
 prob = kde(X.T)
 prob = prob / np.max(prob)  # Normalize to [0, 1]
 
-# Run Quick Shift clustering
-cluster_labels, cluster_centers = quick_shift(
+# Method 1: Standard Quick Shift
+cluster_labels1 = quick_shift(
     X,
     prob=prob,
     ngrid=50,
     lambda_qs=1.0,
     max_dist=3.0
+)
+
+# Method 2: Graph-based Quick Shift (more efficient for large datasets)
+# First build a neighbor graph
+neighbor_graph = build_neighbor_graph(X, graph_type="gabriel")
+
+# Then run Quick Shift with the pre-computed graph
+cluster_labels2 = quick_shift(
+    X,
+    prob=prob,
+    lambda_qs=1.0,
+    neighbor_graph=neighbor_graph
 )
 ```
 
@@ -198,7 +214,7 @@ The script generates a visualization showing:
 - When the number of clusters is unknown
 - When clusters have arbitrary shapes
 - When dealing with noisy data
-- When density-based clustering is appropriate
+- **For large datasets**: Use the graph-based implementation with a pre-computed neighbor graph
 
 ## Minimum Spanning Tree (MST)
 

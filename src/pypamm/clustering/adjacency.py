@@ -19,6 +19,30 @@ def merge(adj: NDArray[np.float64], ic: NDArray[np.int32], thresh: float, N: int
     """
     Nc = len(adj)
 
+    # Ensure cluster labels are within bounds
+    max_label = np.max(ic)
+    if max_label >= Nc:
+        # Remap cluster labels to be contiguous and within bounds
+        unique_labels = np.unique(ic)
+        label_map = {old_label: new_label for new_label, old_label in enumerate(unique_labels)}
+        remapped_ic = np.array([label_map[label] for label in ic], dtype=np.int32)
+
+        # Create a new adjacency matrix with the correct size
+        new_adj = np.zeros((len(unique_labels), len(unique_labels)), dtype=np.float64)
+        for i, old_i in enumerate(unique_labels):
+            for j, old_j in enumerate(unique_labels):
+                if old_i < Nc and old_j < Nc:
+                    new_adj[i, j] = adj[old_i, old_j]
+                elif i == j:
+                    new_adj[i, j] = 1.0  # Self-adjacency is always 1
+                else:
+                    new_adj[i, j] = 0.0  # No adjacency for new clusters
+
+        # Update variables for the rest of the function
+        adj = new_adj
+        ic = remapped_ic
+        Nc = len(adj)
+
     # Step 1: Threshold adjacency matrix to create a graph
     adj_binary = adj > thresh
 
@@ -33,10 +57,11 @@ def merge(adj: NDArray[np.float64], ic: NDArray[np.int32], thresh: float, N: int
     # Step 4: Apply the mapping to the initial cluster labels
     new_labels = np.zeros(N, dtype=np.int32)
     for i in range(N):
-        if ic[i] >= 0:  # Only map valid cluster IDs
+        if ic[i] >= 0 and ic[i] < Nc:  # Only map valid cluster IDs
             new_labels[i] = cluster_map[ic[i]]
         else:
-            new_labels[i] = -1  # Keep invalid cluster IDs as -1
+            # Keep invalid cluster IDs (negative values) as they are
+            new_labels[i] = ic[i] if ic[i] < 0 else n_components
 
     return new_labels
 

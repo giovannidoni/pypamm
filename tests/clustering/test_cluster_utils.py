@@ -4,7 +4,7 @@ Unit tests for the clustering utilities module.
 
 import numpy as np
 
-from pypamm import compute_cluster_covariance, merge_clusters
+from pypamm import compute_cluster_covariance, merge_clusters, reindex_clusters
 
 
 def test_compute_cluster_covariance():
@@ -271,3 +271,70 @@ def test_merge_clusters_numerical_stability():
 
     # Verify all clusters were merged
     assert len(np.unique(new_labels_high)) < 3, "Some clusters should be merged with high threshold"
+
+
+def test_reindex_clusters_basic():
+    """Test basic functionality of reindex_clusters."""
+    # Create a simple array with non-contiguous cluster labels
+    cluster_labels = np.array([0, 0, 3, 3, 7, 7], dtype=np.int32)
+
+    # Reindex the clusters
+    new_labels = reindex_clusters(cluster_labels)
+
+    # Check that the labels are now contiguous (0, 1, 2)
+    assert np.array_equal(new_labels, np.array([0, 0, 1, 1, 2, 2], dtype=np.int32))
+
+    # Check that the number of unique labels is preserved
+    assert len(np.unique(new_labels)) == len(np.unique(cluster_labels))
+
+
+def test_reindex_clusters_with_noise():
+    """Test reindex_clusters with noise points (label -1)."""
+    # Create a simple array with non-contiguous cluster labels and noise
+    cluster_labels = np.array([-1, 0, 0, -1, 3, 3, -1, 7, 7], dtype=np.int32)
+
+    # Reindex the clusters
+    new_labels = reindex_clusters(cluster_labels)
+
+    # Check that noise points (-1) are preserved
+    assert np.array_equal(new_labels[np.where(cluster_labels == -1)], np.array([-1, -1, -1], dtype=np.int32))
+
+    # Check that the valid labels are contiguous (0, 1, 2)
+    expected = np.array([-1, 0, 0, -1, 1, 1, -1, 2, 2], dtype=np.int32)
+    assert np.array_equal(new_labels, expected)
+
+
+def test_reindex_clusters_empty():
+    """Test reindex_clusters with an empty array."""
+    # Create an empty array
+    cluster_labels = np.array([], dtype=np.int32)
+
+    # Reindex the clusters
+    new_labels = reindex_clusters(cluster_labels)
+
+    # Check that the result is also an empty array
+    assert new_labels.shape == (0,)
+
+
+def test_reindex_clusters_single_cluster():
+    """Test reindex_clusters with a single cluster."""
+    # Create an array with a single cluster label
+    cluster_labels = np.array([5, 5, 5, 5], dtype=np.int32)
+
+    # Reindex the clusters
+    new_labels = reindex_clusters(cluster_labels)
+
+    # Check that the labels are now all 0
+    assert np.array_equal(new_labels, np.array([0, 0, 0, 0], dtype=np.int32))
+
+
+def test_reindex_clusters_all_noise():
+    """Test reindex_clusters with all noise points."""
+    # Create an array with all noise points
+    cluster_labels = np.array([-1, -1, -1, -1], dtype=np.int32)
+
+    # Reindex the clusters
+    new_labels = reindex_clusters(cluster_labels)
+
+    # Check that all points are still noise
+    assert np.array_equal(new_labels, np.array([-1, -1, -1, -1], dtype=np.int32))

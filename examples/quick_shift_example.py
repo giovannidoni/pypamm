@@ -2,7 +2,7 @@
 """
 Quick Shift Clustering Example
 
-This example demonstrates how to use the quick_shift and quick_shift_clustering functions
+This example demonstrates how to use the quick_shift function
 from pypamm to perform mode-seeking clustering on a dataset.
 
 Quick Shift is useful for:
@@ -10,6 +10,9 @@ Quick Shift is useful for:
 - Identifying clusters of arbitrary shape
 - Handling noise and outliers
 - Finding modes in the data distribution
+
+Note: For large datasets, consider using the graph-based implementation
+demonstrated in quick_shift_graph_example.py
 """
 
 import matplotlib.pyplot as plt
@@ -72,7 +75,7 @@ max_dist = 3.0  # Maximum distance threshold
 
 for i, lambda_qs in enumerate(lambda_values):
     # Run Quick Shift clustering
-    cluster_labels, cluster_centers = quick_shift(X, prob=prob, ngrid=50, lambda_qs=lambda_qs, max_dist=max_dist)
+    cluster_labels = quick_shift(X, prob=prob, ngrid=50, lambda_qs=lambda_qs, max_dist=max_dist)
 
     # Plot the results
     plt.subplot(2, 2, i + 2)
@@ -83,11 +86,7 @@ for i, lambda_qs in enumerate(lambda_values):
 
     for j, label in enumerate(unique_labels):
         mask = cluster_labels == label
-        plt.scatter(X[mask, 0], X[mask, 1], color=colors[j], s=30, alpha=0.7, label=f"Cluster {j + 1}")
-
-    # Plot cluster centers
-    center_points = X[cluster_centers.astype(int)]
-    plt.scatter(center_points[:, 0], center_points[:, 1], c="red", s=100, marker="*", label="Cluster Centers")
+        plt.scatter(X[mask, 0], X[mask, 1], color=colors[j % 10], s=30, alpha=0.7, label=f"Cluster {j + 1}")
 
     plt.title(f"Quick Shift Clustering\n(lambda={lambda_qs}, {len(unique_labels)} clusters)")
     plt.xlabel("X")
@@ -96,7 +95,6 @@ for i, lambda_qs in enumerate(lambda_values):
     # Print some statistics
     print(f"\nQuick Shift with lambda={lambda_qs}:")
     print(f"  - Number of clusters: {len(unique_labels)}")
-    print(f"  - Number of cluster centers: {len(cluster_centers)}")
 
     # Count points in each cluster
     for j, label in enumerate(unique_labels):
@@ -124,12 +122,16 @@ print("  - Limits the maximum shift distance")
 print("  - Helps prevent connecting distant clusters")
 print("- ngrid: Number of grid points for density estimation")
 print("  - Higher values provide more accurate density estimation")
+print("- neighbor_graph: Optional pre-computed neighbor graph")
+print("  - Significantly improves performance for large datasets")
+print("  - See quick_shift_graph_example.py for details")
 
 print("\nAdvantages of Quick Shift:")
 print("- Automatically determines the number of clusters")
 print("- Can find clusters of arbitrary shape")
 print("- Robust to noise and outliers")
 print("- Based on density estimation, which is intuitive")
+print("- Efficient implementation for large datasets (with neighbor_graph)")
 
 print("\nLimitations:")
 print("- Sensitive to parameter settings")

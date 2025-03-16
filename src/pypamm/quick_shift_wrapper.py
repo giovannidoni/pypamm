@@ -4,6 +4,7 @@ Wrapper functions for the quick_shift module.
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from scipy.sparse import spmatrix
 
 from pypamm.quick_shift import quick_shift_clustering as _quick_shift_clustering
 
@@ -15,35 +16,118 @@ def quick_shift(
     metric: str = "euclidean",
     lambda_qs: float = 1.0,
     max_dist: float = np.inf,
-) -> tuple[NDArray[np.int32], NDArray[np.int32]]:
+    neighbor_graph: spmatrix | None = None,
+) -> NDArray[np.int32]:
     """
-    Vanilla Quick-Shift clustering algorithm based on density gradient ascent.
+    Quick-Shift clustering algorithm based on density gradient ascent.
 
-    This implementation takes pre-computed probability values and does not use KDE internally.
+    This implementation can work with either pairwise distances or a pre-computed
+    neighbor graph, automatically choosing the most efficient approach.
 
     Parameters:
-    - X: (N x D) NumPy array (data points)
-    - prob: (N,) NumPy array of probability estimates for each point. If None, uniform probabilities are used.
-    - ngrid: Number of grid points
-    - metric: Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski")
-    - lambda_qs: Scaling factor for density-based traversal
-    - max_dist: Maximum distance threshold for connecting points (default: infinity)
+    ----------
+    X : array-like, shape (n_samples, n_features)
+        Input data points.
+    prob : array-like, shape (n_samples,), optional
+        Probability estimates for each point. If None, uniform probabilities are used.
+    ngrid : int, default=100
+        Number of grid points (only used when neighbor_graph is None).
+    metric : str, default="euclidean"
+        Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski").
+        Only used when neighbor_graph is None.
+    lambda_qs : float, default=1.0
+        Scaling factor for density-based traversal.
+    max_dist : float, default=np.inf
+        Maximum distance threshold for connecting points.
+        Only used when neighbor_graph is None.
+    neighbor_graph : scipy.sparse matrix, optional
+        Pre-computed neighbor graph. If provided, this will be used instead of computing
+        distances between all points, which is more efficient for large datasets.
 
     Returns:
-    - idxroot: Cluster assignment for each point
-    - cluster_centers: Array of unique cluster centers
+    -------
+    labels : ndarray of shape (n_samples,)
+        Cluster assignment for each point.
     """
     # Ensure X is a numpy array
     X = np.asarray(X, dtype=np.float64)
+    n_samples = X.shape[0]
 
     # If prob is None, use uniform probabilities
     if prob is None:
-        prob = np.ones(X.shape[0], dtype=np.float64) / X.shape[0]
+        prob = np.ones(n_samples, dtype=np.float64) / n_samples
     else:
         prob = np.asarray(prob, dtype=np.float64)
 
-    # Call the Cython implementation
-    return _quick_shift_clustering(X, prob, ngrid, metric, lambda_qs, max_dist)
+    # Choose the appropriate implementation based on whether a neighbor graph is provided
+    if neighbor_graph is not None:
+        # Neighbor graph-based implementation (more efficient for large datasets)
+
+        # Initialize parent array (each point starts as its own parent)
+        parents = np.arange(n_samples, dtype=np.int32)
+
+        # For each point, find the neighbor with highest density
+        for i in range(n_samples):
+            # Get neighbors of point i
+            neighbors = neighbor_graph.getrow(i).indices
+
+            if len(neighbors) > 0:
+                # Find neighbor with highest density
+                neighbor_probs = prob[neighbors]
+
+                # Only consider neighbors with higher density
+                higher_density_mask = neighbor_probs > prob[i] * lambda_qs
+
+                if np.any(higher_density_mask):
+                    # Get indices of neighbors with higher density
+                    higher_density_neighbors = neighbors[higher_density_mask]
+                    higher_density_probs = neighbor_probs[higher_density_mask]
+
+                    # Find the neighbor with highest density
+                    best_neighbor = higher_density_neighbors[np.argmax(higher_density_probs)]
+
+                    # Set parent to the best neighbor
+                    parents[i] = best_neighbor
+
+        # Propagate labels to find cluster roots
+        labels = np.zeros(n_samples, dtype=np.int32)
+        cluster_id = 0
+
+        for i in range(n_samples):
+            if parents[i] == i:  # This is a root node
+                # Assign a new cluster ID
+                labels[i] = cluster_id
+                cluster_id += 1
+            else:
+                # Follow the path to the root
+                current = i
+                path = [current]
+
+                while parents[current] != current:
+                    current = parents[current]
+                    path.append(current)
+
+                    # Avoid infinite loops
+                    if len(path) > n_samples:
+                        break
+
+                # Assign the root's cluster ID to all points in the path
+                root = path[-1]
+
+                # If the root doesn't have a label yet, assign one
+                if labels[root] == 0 and root != 0:
+                    labels[root] = cluster_id
+                    cluster_id += 1
+
+                # Assign the root's label to this point
+                labels[i] = labels[root]
+
+        return labels
+    else:
+        # Traditional implementation using the Cython code
+        # Extract just the labels from the tuple returned by _quick_shift_clustering
+        labels, _ = _quick_shift_clustering(X, prob, ngrid, None, metric, lambda_qs, max_dist)
+        return labels
 
 
 def quick_shift_kde(
@@ -53,7 +137,8 @@ def quick_shift_kde(
     metric: str = "euclidean",
     lambda_qs: float = 1.0,
     max_dist: float = np.inf,
-) -> tuple[NDArray[np.int32], NDArray[np.int32]]:
+    neighbor_graph: spmatrix | None = None,
+) -> NDArray[np.int32]:
     """
     KDE-enhanced Quick-Shift clustering algorithm.
 
@@ -61,25 +146,36 @@ def quick_shift_kde(
     before applying the Quick-Shift algorithm.
 
     Parameters:
-    - X: (N x D) NumPy array (data points)
-    - bandwidth: Bandwidth parameter for KDE
-    - ngrid: Number of grid points
-    - metric: Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski")
-    - lambda_qs: Scaling factor for density-based traversal
-    - max_dist: Maximum distance threshold for connecting points (default: infinity)
+    ----------
+    X : array-like, shape (n_samples, n_features)
+        Input data points.
+    bandwidth : float
+        Bandwidth parameter for KDE.
+    ngrid : int, default=100
+        Number of grid points.
+    metric : str, default="euclidean"
+        Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski").
+    lambda_qs : float, default=1.0
+        Scaling factor for density-based traversal.
+    max_dist : float, default=np.inf
+        Maximum distance threshold for connecting points.
+    neighbor_graph : scipy.sparse matrix, optional
+        Pre-computed neighbor graph. If provided, this will be used instead of computing
+        distances between all points.
 
     Returns:
-    - idxroot: Cluster assignment for each point
-    - cluster_centers: Array of unique cluster centers
+    -------
+    labels : ndarray of shape (n_samples,)
+        Cluster assignment for each point.
     """
     # Ensure X is a numpy array
     X = np.asarray(X, dtype=np.float64)
 
     # Import KDE function
-    from pypamm.density import compute_kde
+    from pypamm.density.kde import compute_kde
 
     # Compute probability densities using KDE
     prob = compute_kde(X, X, bandwidth)
 
-    # Call the vanilla quick_shift with pre-computed probabilities
-    return quick_shift(X, prob, ngrid, metric, lambda_qs, max_dist)
+    # Call the unified quick_shift with pre-computed probabilities
+    return quick_shift(X, prob, ngrid, metric, lambda_qs, max_dist, neighbor_graph)

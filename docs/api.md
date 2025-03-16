@@ -53,37 +53,60 @@ Builds a k-nearest neighbor graph for a dataset.
 
 ## Quick Shift Clustering
 
-### `quick_shift(X, prob=None, ngrid=50, lambda_qs=1.0, max_dist=np.inf, metric="euclidean")`
+### `quick_shift(X, prob=None, ngrid=100, metric="euclidean", lambda_qs=1.0, max_dist=np.inf, neighbor_graph=None)`
 
-Performs Quick Shift clustering on a dataset.
+Quick-Shift clustering algorithm based on density gradient ascent.
 
-**Parameters:**
-- `X` (numpy.ndarray): Data matrix (N x D)
-- `prob` (numpy.ndarray, optional): Probability estimates for each point
-- `ngrid` (int): Number of grid points for density estimation
-- `lambda_qs` (float): Scaling factor for density-based traversal
-- `max_dist` (float): Maximum distance threshold for connecting points
-- `metric` (str): Distance metric to use
-
-**Returns:**
-- `cluster_labels` (numpy.ndarray): Cluster assignment for each point
-- `cluster_centers` (numpy.ndarray): Indices of cluster centers
-
-### `quick_shift_clustering(X, prob, ngrid, metric="euclidean", lambda_qs=1.0, max_dist=np.inf)`
-
-Low-level implementation of the Quick Shift clustering algorithm.
+This implementation can work with either pairwise distances or a pre-computed
+neighbor graph, automatically choosing the most efficient approach.
 
 **Parameters:**
-- `X` (numpy.ndarray): Data matrix (N x D)
-- `prob` (numpy.ndarray): Probability estimates for each point
-- `ngrid` (int): Number of grid points
-- `metric` (str): Distance metric to use
-- `lambda_qs` (float): Scaling factor for density-based traversal
-- `max_dist` (float): Maximum distance threshold for connecting points
+- `X` (array-like, shape (n_samples, n_features)): Input data points.
+- `prob` (array-like, shape (n_samples,), optional): Probability estimates for each point. If None, uniform probabilities are used.
+- `ngrid` (int, default=100): Number of grid points (only used when neighbor_graph is None).
+- `metric` (str, default="euclidean"): Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski"). Only used when neighbor_graph is None.
+- `lambda_qs` (float, default=1.0): Scaling factor for density-based traversal.
+- `max_dist` (float, default=np.inf): Maximum distance threshold for connecting points. Only used when neighbor_graph is None.
+- `neighbor_graph` (scipy.sparse matrix, optional): Pre-computed neighbor graph. If provided, this will be used instead of computing distances between all points, which is more efficient for large datasets.
 
 **Returns:**
-- `idxroot` (numpy.ndarray): Cluster assignment for each point
-- `cluster_centers` (numpy.ndarray): Array of unique cluster centers
+- `labels` (ndarray of shape (n_samples,)): Cluster assignment for each point.
+
+### `quick_shift_kde(X, bandwidth, ngrid=100, metric="euclidean", lambda_qs=1.0, max_dist=np.inf, neighbor_graph=None)`
+
+KDE-enhanced Quick-Shift clustering algorithm.
+
+This implementation computes probability densities using Kernel Density Estimation (KDE)
+before applying the Quick-Shift algorithm.
+
+**Parameters:**
+- `X` (array-like, shape (n_samples, n_features)): Input data points.
+- `bandwidth` (float): Bandwidth parameter for KDE.
+- `ngrid` (int, default=100): Number of grid points.
+- `metric` (str, default="euclidean"): Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski").
+- `lambda_qs` (float, default=1.0): Scaling factor for density-based traversal.
+- `max_dist` (float, default=np.inf): Maximum distance threshold for connecting points.
+- `neighbor_graph` (scipy.sparse matrix, optional): Pre-computed neighbor graph. If provided, this will be used instead of computing distances between all points.
+
+**Returns:**
+- `labels` (ndarray of shape (n_samples,)): Cluster assignment for each point.
+
+### `quick_shift_clustering(X, prob, ngrid, neighbor_graph=None, metric="euclidean", lambda_qs=1.0, max_dist=np.inf)`
+
+Low-level implementation of the Quick-Shift clustering algorithm with optional graph constraints.
+
+**Parameters:**
+- `X` (array-like, shape (n_samples, n_features)): Input data points.
+- `prob` (array-like, shape (n_samples,)): Probability estimates for each point.
+- `ngrid` (int): Number of grid points.
+- `neighbor_graph` (scipy.sparse matrix, optional): Pre-computed neighbor graph (MST, k-NN, Gabriel Graph).
+- `metric` (str, default="euclidean"): Distance metric.
+- `lambda_qs` (float, default=1.0): Scaling factor for density-based traversal.
+- `max_dist` (float, default=np.inf): Maximum distance threshold.
+
+**Returns:**
+- `idxroot` (ndarray of shape (n_samples,)): Cluster assignment for each point.
+- `cluster_centers` (ndarray): Array of unique cluster centers.
 
 ## Minimum Spanning Tree (MST)
 

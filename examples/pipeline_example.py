@@ -109,8 +109,14 @@ def main():
     prob = prob / np.max(prob)  # Normalize to [0, 1]
 
     # Step 6: Run Quick Shift clustering
-    cluster_labels, cluster_centers = quick_shift(
-        grid_points, prob=prob, ngrid=20, lambda_qs=args.lambda_qs, max_dist=args.max_dist
+    # Use the Gabriel graph for more efficient clustering
+    cluster_labels = quick_shift(
+        grid_points,
+        prob=prob,
+        ngrid=20,
+        lambda_qs=args.lambda_qs,
+        max_dist=args.max_dist,
+        neighbor_graph=graph,  # Use the pre-computed Gabriel graph
     )
 
     # Plot the clustering results
@@ -128,19 +134,13 @@ def main():
         u, v = int(edge[0]), int(edge[1])
         plt.plot([grid_points[u, 0], grid_points[v, 0]], [grid_points[u, 1], grid_points[v, 1]], "k-", alpha=0.3)
 
-    # Plot cluster centers
-    center_points = grid_points[cluster_centers.astype(int)]
-    plt.scatter(center_points[:, 0], center_points[:, 1], c="red", s=100, marker="*", label="Cluster Centers")
-
     plt.title("4. Quick Shift Clustering with MST")
     plt.xlabel("X")
     plt.ylabel("Y")
-    plt.legend()
 
     print("\nStep 4-6: MST and Quick Shift clustering")
     print(f"  - Number of MST edges: {len(mst_edges)}")
     print(f"  - Number of clusters: {len(unique_labels)}")
-    print(f"  - Number of cluster centers: {len(cluster_centers)}")
 
     plt.tight_layout()
     plt.savefig(args.output)
@@ -175,13 +175,15 @@ def main():
     print("\n6. Quick Shift Clustering:")
     print("   - Used the density information to find clusters")
     print("   - Automatically determined the number of clusters")
-    print("   - Identified cluster centers at density modes")
+    print("   - Used the Gabriel graph for efficient clustering")
+    print("   - Found natural clusters based on density modes")
 
     print("\nAdvantages of this Pipeline:")
     print("- Handles large datasets efficiently through grid selection")
     print("- Captures complex data structures with appropriate graph types")
     print("- Finds clusters of arbitrary shape using density-based methods")
     print("- Provides a hierarchical view of the data through the MST")
+    print("- Uses graph-based Quick Shift for efficient clustering")
     print("- Requires minimal parameter tuning")
 
     print("\nExample completed successfully!")
