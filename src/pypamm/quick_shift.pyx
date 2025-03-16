@@ -35,6 +35,7 @@ def quick_shift_clustering(
     - cluster_centers: Array of unique cluster centers
     """
     cdef Py_ssize_t N = X.shape[0]
+    cdef Py_ssize_t D = X.shape[1]  # Add dimensionality
     cdef Py_ssize_t i, j
 
     # Initialize cluster labels (each point starts as its own cluster)
@@ -81,6 +82,12 @@ def quick_shift_clustering(
     for i in range(N):
         if nearest_neighbor[i] != -1:
             idxroot[i] = idxroot[nearest_neighbor[i]]
+
+    # Get unique cluster roots
+    unique_roots, inverse = np.unique(idxroot, return_inverse=True)
+
+    # Create cluster labels from inverse mapping
+    cdef np.ndarray[np.int32_t, ndim=1] cluster_labels = inverse.astype(np.int32)
 
     # Calculate cluster centers (mean of points in each cluster)
     cdef np.ndarray[np.float64_t, ndim=2] cluster_centers = np.zeros((len(unique_roots), D), dtype=np.float64)
