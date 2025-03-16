@@ -49,10 +49,10 @@ dataset_overlapping:
 dataset_high_dim:
   n_clusters: 8
   n_dimensions: 100
-  cluster_std: 0.1
+  cluster_std: 0.3
   cluster_uniformity: 1.0
-  population_uniformity: 1.0
-  noise_level: 0.5
+  population_uniformity: 0.3
+  noise_level: 0.4
   n_samples: 2000
   random_seed: 42
   description: "High-dimensional dataset with 8 clusters in 100D space"
@@ -70,13 +70,13 @@ dataset_high_dim_non_uniform:
 
 # New datasets with non-uniform population distribution
 dataset_uneven_population:
-  n_clusters: 5
+  n_clusters: 10
   n_dimensions: 2
   cluster_std: 0.1
   cluster_uniformity: 1.0
   population_uniformity: 0.3
   noise_level: 0.1
-  n_samples: 2000
+  n_samples: 4000
   random_seed: 105
   description: "Dataset with uneven cluster populations (one dominant cluster)"
 

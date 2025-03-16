@@ -9,13 +9,11 @@ and noise level, all normalized to the [0,1] range.
 """
 
 import os
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from sklearn.manifold import TSNE
-from sklearn.preprocessing import MinMaxScaler
 
 
 def load_config(config_name: str = "data_config"):
@@ -157,9 +155,7 @@ def generate_dataset(config_section: str, config_name: str = "data_config") -> t
     X_clustered = np.vstack(X_clustered)
 
     # Generate noise data (uniform distribution)
-    X_min = X_clustered.min(axis=0)
-    X_max = X_clustered.max(axis=0)
-    X_noise = np.random.uniform(low=X_min, high=X_max, size=(n_noise, n_dimensions))
+    X_noise = np.random.uniform(low=0, high=1, size=(n_noise, n_dimensions))
 
     # Combine clustered data and noise
     X = np.vstack([X_clustered, X_noise])
@@ -183,7 +179,6 @@ def generate_dataset(config_section: str, config_name: str = "data_config") -> t
         print(f"  Uniform cluster populations: ~{n_clustered // n_clusters} points per cluster")
 
     print(f"  {noise_level * 100:.1f}% noise")
-    print("  All values normalized to [0,1] range")
 
     return X
 
@@ -208,7 +203,6 @@ def list_dataset_sections():
 def plot_clusters(
     X,
     labels=None,
-    use_tsne=False,
     title=None,
     output_path=None,
     figsize=(12, 10),
@@ -228,8 +222,6 @@ def plot_clusters(
         Dataset to visualize, can be any dimensionality
     labels : np.ndarray, optional
         Cluster labels for coloring points
-    use_tsne : bool, default=False
-        Whether to use t-SNE for dimensionality reduction if X has more than 2 dimensions
     title : str, optional
         Title for the plot
     output_path : str, optional
@@ -258,38 +250,16 @@ def plot_clusters(
     n_dimensions = X.shape[1]
 
     # Apply t-SNE if needed
-    if n_dimensions > 2 and use_tsne:
+    if n_dimensions > 2:
         print(f"Applying t-SNE to reduce {n_dimensions}D data to 2D for visualization...")
 
-        # For high-dimensional data, first apply PCA to reduce to 50D
-        if n_dimensions > 50:
-            from sklearn.decomposition import PCA
-
-            print(f"  First applying PCA to reduce from {n_dimensions}D to 50D...")
-            start_time = time.time()
-            pca = PCA(n_components=50, random_state=random_seed)
-            X = pca.fit_transform(X)
-            end_time = time.time()
-            print(f"  PCA completed in {end_time - start_time:.2f}s")
-            n_dimensions = 50
-
         # Then apply t-SNE for final 2D visualization
-        start_time = time.time()
         tsne = TSNE(n_components=2, random_state=random_seed)
         X_2d = tsne.fit_transform(X)
-        end_time = time.time()
-        print(f"  t-SNE reduced to 2D in {end_time - start_time:.2f}s")
 
-        # Normalize t-SNE representation to [0,1] range
-        X_2d = MinMaxScaler().fit_transform(X_2d)
     elif n_dimensions == 2:
         # Already 2D, no need for reduction
         X_2d = X
-    else:
-        # More than 2D but t-SNE not requested
-        print(f"Warning: Data has {n_dimensions} dimensions but t-SNE reduction not requested.")
-        print("Only the first 2 dimensions will be plotted.")
-        X_2d = X[:, :2]
 
     # Create figure if ax is not provided
     if ax is None:
@@ -378,7 +348,6 @@ if __name__ == "__main__":
         fig = plot_clusters(
             X,
             labels=None,  # No clustering labels
-            use_tsne=(dimension > 2),
             title=title,
             output_path=output_path,
         )

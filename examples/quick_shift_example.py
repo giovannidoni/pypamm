@@ -90,7 +90,6 @@ for i, dataset_name in enumerate(this_config["datasets"]):
         plot_clusters(
             X,
             labels=labels,
-            use_tsne=False,
             title=title,
             cmap=viz_config["cmap"],
             alpha=viz_config["alpha"],
