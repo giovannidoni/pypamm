@@ -1,7 +1,7 @@
 # PyPAMM
 
 [![Python Package](https://github.com/giovannidoni/pypamm/actions/workflows/python-package.yml/badge.svg)](https://github.com/giovannidoni/pypamm/actions/workflows/python-package.yml)
-[![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://github.com/giovannidoni/pypamm)
+[![Python Versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://github.com/giovannidoni/pypamm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 PyPAMM is a Python implementation of the Probabilistic Analysis of Molecular Motifs (PAMM) method, originally developed for analyzing molecular dynamics simulations. This package provides efficient, Cython-accelerated implementations of the core PAMM algorithms.
@@ -33,7 +33,7 @@ The original PAMM method was developed by the Laboratory of Computational Scienc
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.10 or higher
 - NumPy 2.0.0 or higher
 - Cython 3.0.0 or higher
 - SciPy 1.12.0 or higher

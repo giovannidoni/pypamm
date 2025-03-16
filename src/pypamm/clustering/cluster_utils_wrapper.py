@@ -60,7 +60,7 @@ def compute_cluster_covariance(
 
     # Apply regularization if requested
     if regularization is not None:
-        if not isinstance(regularization, (int, float)):
+        if not isinstance(regularization, int | float):
             raise ValueError("regularization must be a number")
         if regularization < 0:
             raise ValueError("regularization must be non-negative")
