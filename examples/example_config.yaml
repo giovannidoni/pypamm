@@ -12,7 +12,7 @@ visualization:
 
 datasets: &data
   - dataset_high_noise
-  - dataset_high_dim
+  - dataset_uneven_population
 
 # Example-specific configurations
 examples:
@@ -27,3 +27,9 @@ examples:
         max_dist: 0.5
         ngrid: 100
         metric: "euclidean"
+  kde_example:
+    datasets: *data
+    kde:
+      bandwidths: [0.1, 0.2, 0.3]
+      ngrid: 100
+      metric: "euclidean"

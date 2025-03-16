@@ -65,9 +65,9 @@ test: install
 test-v: install
 	$(POETRY) run pytest -v
 
-# Run the example
-run-example: install
-	$(POETRY) run python example.py
+plots:
+	$(POETRY) run python examples/kde_example.py
+	$(POETRY) run python examples/quick_shift_example.py
 
 # Development setup - installs dependencies and the package in development mode
 dev: clean
