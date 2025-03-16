@@ -663,3 +663,421 @@ def test_compute_bandwidth_alpha_small():
         # Check that bandwidths are positive
         assert h > 0, f"Global bandwidth should be positive for alpha={alpha}"
         assert np.all(adaptive_h > 0), f"All adaptive bandwidths should be positive for alpha={alpha}"
+
+
+# Test compute_bandwidth with fpoints parameter
+def test_compute_bandwidth_fpoints(random_data):
+    """Test the effect of fpoints parameter on compute_bandwidth."""
+    # Try different fpoints values
+    fpoints_values = [0.05, 0.2, 0.5]
+    bandwidths = []
+    adaptive_bandwidths_list = []
+
+    for fpoints in fpoints_values:
+        h, adaptive_h = compute_bandwidth(random_data, fpoints=fpoints)
+        bandwidths.append(h)
+        adaptive_bandwidths_list.append(adaptive_h)
+        print(f"Successfully computed bandwidth for fpoints={fpoints}: {h}")
+
+    # Check basic properties
+    assert all(b > 0 for b in bandwidths), "All bandwidths should be positive"
+    assert all(np.all(ab > 0) for ab in adaptive_bandwidths_list), "All adaptive bandwidths should be positive"
+
+    # Check that the returned bandwidths have the correct shape
+    assert all(len(ab) == len(random_data) for ab in adaptive_bandwidths_list), (
+        "Adaptive bandwidths should have same length as data"
+    )
+
+    # Different fpoints values should produce different bandwidths
+    # At least some pairs should be different
+    different_pairs = 0
+    for i in range(len(fpoints_values)):
+        for j in range(i + 1, len(fpoints_values)):
+            if abs(bandwidths[i] - bandwidths[j]) > 1e-6:
+                different_pairs += 1
+
+    assert different_pairs > 0, "Different fpoints values should produce at least some different bandwidths"
+
+
+# Test compute_bandwidth with gspread parameter
+def test_compute_bandwidth_gspread(random_data):
+    """Test the effect of gspread parameter on compute_bandwidth."""
+    # Try different gspread values
+    gspread_values = [0.5, 1.0, 2.0]
+    bandwidths = []
+    adaptive_bandwidths_list = []
+
+    for gspread in gspread_values:
+        h, adaptive_h = compute_bandwidth(random_data, gspread=gspread)
+        bandwidths.append(h)
+        adaptive_bandwidths_list.append(adaptive_h)
+        print(f"Successfully computed bandwidth for gspread={gspread}: {h}")
+
+    # Check basic properties
+    assert all(b > 0 for b in bandwidths), "All bandwidths should be positive"
+    assert all(np.all(ab > 0) for ab in adaptive_bandwidths_list), "All adaptive bandwidths should be positive"
+
+    # Check that the returned bandwidths have the correct shape
+    assert all(len(ab) == len(random_data) for ab in adaptive_bandwidths_list), (
+        "Adaptive bandwidths should have same length as data"
+    )
+
+    # Different gspread values should produce different bandwidths
+    # Specifically, larger gspread should produce larger bandwidths
+    assert bandwidths[0] < bandwidths[1] < bandwidths[2], "Larger gspread should produce larger bandwidths"
+
+
+# Test compute_bandwidth with mutual exclusivity of fpoints and gspread
+def test_compute_bandwidth_mutual_exclusivity():
+    """Test that fpoints and gspread parameters are mutually exclusive."""
+    # Create a small dataset
+    np.random.seed(42)
+    data = np.random.rand(20, 2)
+
+    # Setting both fpoints and gspread should raise an error
+    with pytest.raises(ValueError, match="Only one of `fpoints` or `gspread` can be set"):
+        compute_bandwidth(data, fpoints=0.1, gspread=1.0)
+
+
+# Test compute_kde with fpoints parameter
+def test_compute_kde_with_fpoints(random_data, grid_points):
+    """Test compute_kde with fpoints parameter."""
+    # Test with different fpoints values
+    fpoints_values = [0.05, 0.2]
+    densities = []
+
+    for fpoints in fpoints_values:
+        density = compute_kde(random_data, grid_points, alpha=0.5, adaptive=True, fpoints=fpoints)
+        densities.append(density)
+
+        # Check shape and positivity
+        assert density.shape == (len(grid_points),), f"Density shape mismatch for fpoints={fpoints}"
+        assert np.all(density >= 0), f"Density should be non-negative for fpoints={fpoints}"
+
+    # Different fpoints values should produce different densities
+    assert not np.allclose(densities[0], densities[1]), "Different fpoints values should produce different densities"
+
+
+# Test compute_kde with gspread parameter
+def test_compute_kde_with_gspread(random_data, grid_points):
+    """Test compute_kde with gspread parameter."""
+    # Test with different gspread values
+    gspread_values = [0.5, 2.0]
+    densities = []
+
+    for gspread in gspread_values:
+        density = compute_kde(random_data, grid_points, alpha=0.5, adaptive=True, gspread=gspread)
+        densities.append(density)
+
+        # Check shape and positivity
+        assert density.shape == (len(grid_points),), f"Density shape mismatch for gspread={gspread}"
+        assert np.all(density >= 0), f"Density should be non-negative for gspread={gspread}"
+
+    # Different gspread values should produce different densities
+    assert not np.allclose(densities[0], densities[1]), "Different gspread values should produce different densities"
+
+
+# Test kde_bootstrap_error with fpoints parameter
+def test_kde_bootstrap_error_with_fpoints(simple_data):
+    """Test kde_bootstrap_error with fpoints parameter."""
+    n_bootstrap = 5
+    alpha = 0.5
+    fpoints = 0.1
+
+    mean_kde, std_kde = kde_bootstrap_error(simple_data, n_bootstrap, alpha=alpha, adaptive=True, fpoints=fpoints)
+
+    # Check shapes and non-negativity
+    assert mean_kde.shape == (len(simple_data),), "Mean KDE shape mismatch"
+    assert std_kde.shape == (len(simple_data),), "Std KDE shape mismatch"
+    assert np.all(mean_kde >= 0), "Mean KDE should be non-negative"
+    assert np.all(std_kde >= 0), "Std KDE should be non-negative"
+
+    # Verify that bootstrap produces reasonable results
+    # Compute KDE directly for comparison
+    direct_kde = compute_kde(simple_data, simple_data, alpha=alpha, adaptive=True, fpoints=fpoints)
+
+    # Mean KDE from bootstrap should be similar to direct KDE (but not identical)
+    assert np.allclose(mean_kde, direct_kde, rtol=0.5), "Bootstrap mean should be roughly similar to direct KDE"
+
+
+# Test kde_bootstrap_error with gspread parameter
+def test_kde_bootstrap_error_with_gspread(simple_data):
+    """Test kde_bootstrap_error with gspread parameter."""
+    n_bootstrap = 5
+    alpha = 0.5
+    gspread = 1.5
+
+    mean_kde, std_kde = kde_bootstrap_error(simple_data, n_bootstrap, alpha=alpha, adaptive=True, gspread=gspread)
+
+    # Check shapes and non-negativity
+    assert mean_kde.shape == (len(simple_data),), "Mean KDE shape mismatch"
+    assert std_kde.shape == (len(simple_data),), "Std KDE shape mismatch"
+    assert np.all(mean_kde >= 0), "Mean KDE should be non-negative"
+    assert np.all(std_kde >= 0), "Std KDE should be non-negative"
+
+    # Verify that bootstrap produces reasonable results
+    # Compute KDE directly for comparison
+    direct_kde = compute_kde(simple_data, simple_data, alpha=alpha, adaptive=True, gspread=gspread)
+
+    # Mean KDE from bootstrap should be similar to direct KDE (but not identical)
+    assert np.allclose(mean_kde, direct_kde, rtol=0.5), "Bootstrap mean should be roughly similar to direct KDE"
+
+
+# Test gauss_prepare with fpoints parameter
+def test_gauss_prepare_with_fpoints():
+    """Test gauss_prepare with fpoints parameter."""
+    # Create a dataset
+    np.random.seed(42)
+    data = np.random.rand(50, 2)
+
+    # Test with fpoints parameter
+    result = gauss_prepare(data, alpha=0.5, adaptive=True, fpoints=0.1)
+    mean, cov, inv_cov, eigvals, Hi, Hiinv = result
+
+    # Check shapes
+    assert mean.shape == (2,), "Mean shape mismatch"
+    assert cov.shape == (2, 2), "Covariance shape mismatch"
+    assert inv_cov.shape == (2, 2), "Inverse covariance shape mismatch"
+    assert eigvals.shape == (2,), "Eigenvalues shape mismatch"
+    assert Hi.shape == (2, 2), "Bandwidth matrix shape mismatch"
+    assert Hiinv.shape == (2, 2), "Inverse bandwidth matrix shape mismatch"
+
+    # Check that matrices are valid
+    assert np.all(eigvals > 0), "Eigenvalues should be positive"
+    assert np.allclose(np.dot(Hi, Hiinv), np.eye(2), atol=1e-5), "Hi * Hiinv should be identity"
+
+
+# Test gauss_prepare with gspread parameter
+def test_gauss_prepare_with_gspread():
+    """Test gauss_prepare with gspread parameter."""
+    # Create a dataset
+    np.random.seed(42)
+    data = np.random.rand(50, 2)
+
+    # Test with gspread parameter
+    result = gauss_prepare(data, alpha=0.5, adaptive=True, gspread=1.5)
+    mean, cov, inv_cov, eigvals, Hi, Hiinv = result
+
+    # Check shapes
+    assert mean.shape == (2,), "Mean shape mismatch"
+    assert cov.shape == (2, 2), "Covariance shape mismatch"
+    assert inv_cov.shape == (2, 2), "Inverse covariance shape mismatch"
+    assert eigvals.shape == (2,), "Eigenvalues shape mismatch"
+    assert Hi.shape == (2, 2), "Bandwidth matrix shape mismatch"
+    assert Hiinv.shape == (2, 2), "Inverse bandwidth matrix shape mismatch"
+
+    # Check that matrices are valid
+    assert np.all(eigvals > 0), "Eigenvalues should be positive"
+    assert np.allclose(np.dot(Hi, Hiinv), np.eye(2), atol=1e-5), "Hi * Hiinv should be identity"
+
+
+# Test adaptive KDE vs fixed bandwidth KDE on anisotropic data
+def test_adaptive_vs_fixed_on_anisotropic_data():
+    """Test that adaptive KDE performs better than fixed bandwidth KDE on anisotropic data."""
+    # Create an anisotropic dataset (elongated in one dimension)
+    np.random.seed(42)
+    n_samples = 200
+
+    # Generate data with high variance in x direction and low variance in y direction
+    x = np.random.normal(0, 3, n_samples)  # High variance
+    y = np.random.normal(0, 0.3, n_samples)  # Low variance
+    anisotropic_data = np.column_stack([x, y])
+
+    # Create a grid for evaluation
+    grid_size = 50
+    x_grid = np.linspace(-10, 10, grid_size)
+    y_grid = np.linspace(-2, 2, grid_size)
+    xx, yy = np.meshgrid(x_grid, y_grid)
+    grid_points = np.column_stack([xx.flatten(), yy.flatten()])
+
+    # Compute KDE with fixed bandwidth
+    fixed_bandwidth = 1.0  # Medium bandwidth
+    density_fixed = compute_kde(anisotropic_data, grid_points, constant_bandwidth=fixed_bandwidth, adaptive=False)
+
+    # Compute KDE with adaptive bandwidth
+    density_adaptive = compute_kde(anisotropic_data, grid_points, alpha=0.5, adaptive=True)
+
+    # Reshape densities for analysis
+    density_fixed_grid = density_fixed.reshape(grid_size, grid_size)
+    density_adaptive_grid = density_adaptive.reshape(grid_size, grid_size)
+
+    # Calculate log-likelihood on a test set (hold-out data)
+    np.random.seed(43)  # Different seed for test data
+    n_test = 50
+    x_test = np.random.normal(0, 3, n_test)
+    y_test = np.random.normal(0, 0.3, n_test)
+    test_data = np.column_stack([x_test, y_test])
+
+    # Compute log-likelihood for both methods
+    log_likelihood_fixed = 0
+    log_likelihood_adaptive = 0
+
+    for point in test_data:
+        # Find closest grid point
+        distances = np.sum((grid_points - point) ** 2, axis=1)
+        closest_idx = np.argmin(distances)
+
+        # Add log density (with small epsilon to avoid log(0))
+        log_likelihood_fixed += np.log(density_fixed[closest_idx] + 1e-10)
+        log_likelihood_adaptive += np.log(density_adaptive[closest_idx] + 1e-10)
+
+    print(f"Log-likelihood fixed: {log_likelihood_fixed}")
+    print(f"Log-likelihood adaptive: {log_likelihood_adaptive}")
+
+    # Adaptive KDE should have higher log-likelihood on anisotropic data
+    assert log_likelihood_adaptive > log_likelihood_fixed, (
+        "Adaptive KDE should perform better (higher log-likelihood) than fixed bandwidth KDE on anisotropic data"
+    )
+
+    # Visual check: adaptive KDE should have better peak-to-noise ratio
+    peak_fixed = np.max(density_fixed_grid)
+    noise_fixed = np.mean(density_fixed_grid[density_fixed_grid < np.percentile(density_fixed_grid, 25)])
+    ratio_fixed = peak_fixed / (noise_fixed + 1e-10)
+
+    peak_adaptive = np.max(density_adaptive_grid)
+    noise_adaptive = np.mean(density_adaptive_grid[density_adaptive_grid < np.percentile(density_adaptive_grid, 25)])
+    ratio_adaptive = peak_adaptive / (noise_adaptive + 1e-10)
+
+    print(f"Peak-to-noise ratio fixed: {ratio_fixed}")
+    print(f"Peak-to-noise ratio adaptive: {ratio_adaptive}")
+
+    # Adaptive KDE should have better peak-to-noise ratio
+    assert ratio_adaptive > ratio_fixed, (
+        "Adaptive KDE should have better peak-to-noise ratio than fixed bandwidth KDE on anisotropic data"
+    )
+
+
+# Test adaptive KDE with fpoints parameter on anisotropic data
+def test_adaptive_kde_with_fpoints_on_anisotropic_data():
+    """Test that adaptive KDE with fpoints parameter performs well on anisotropic data."""
+    # Create an anisotropic dataset (elongated in one dimension)
+    np.random.seed(42)
+    n_samples = 200
+
+    # Generate data with high variance in x direction and low variance in y direction
+    x = np.random.normal(0, 3, n_samples)  # High variance
+    y = np.random.normal(0, 0.3, n_samples)  # Low variance
+    anisotropic_data = np.column_stack([x, y])
+
+    # Create a grid for evaluation
+    grid_size = 30
+    x_grid = np.linspace(-10, 10, grid_size)
+    y_grid = np.linspace(-2, 2, grid_size)
+    xx, yy = np.meshgrid(x_grid, y_grid)
+    grid_points = np.column_stack([xx.flatten(), yy.flatten()])
+
+    # Compute KDE with fixed bandwidth
+    fixed_bandwidth = 1.0  # Medium bandwidth
+    density_fixed = compute_kde(anisotropic_data, grid_points, constant_bandwidth=fixed_bandwidth, adaptive=False)
+
+    # Compute KDE with adaptive bandwidth and fpoints parameter
+    fpoints = 0.1  # Use 10% of points for local bandwidth estimation
+    density_adaptive_fpoints = compute_kde(anisotropic_data, grid_points, alpha=0.5, adaptive=True, fpoints=fpoints)
+
+    # Calculate log-likelihood on a test set (hold-out data)
+    np.random.seed(43)  # Different seed for test data
+    n_test = 50
+    x_test = np.random.normal(0, 3, n_test)
+    y_test = np.random.normal(0, 0.3, n_test)
+    test_data = np.column_stack([x_test, y_test])
+
+    # Compute log-likelihood for both methods
+    log_likelihood_fixed = 0
+    log_likelihood_adaptive = 0
+
+    for point in test_data:
+        # Find closest grid point
+        distances = np.sum((grid_points - point) ** 2, axis=1)
+        closest_idx = np.argmin(distances)
+
+        # Add log density (with small epsilon to avoid log(0))
+        log_likelihood_fixed += np.log(density_fixed[closest_idx] + 1e-10)
+        log_likelihood_adaptive += np.log(density_adaptive_fpoints[closest_idx] + 1e-10)
+
+    print(f"Log-likelihood fixed: {log_likelihood_fixed}")
+    print(f"Log-likelihood adaptive with fpoints={fpoints}: {log_likelihood_adaptive}")
+
+    # Adaptive KDE with fpoints should have higher log-likelihood on anisotropic data
+    assert log_likelihood_adaptive > log_likelihood_fixed, (
+        "Adaptive KDE with fpoints should perform better than fixed bandwidth KDE on anisotropic data"
+    )
+
+
+# Test adaptive KDE with gspread parameter on anisotropic data
+def test_adaptive_kde_with_gspread_on_anisotropic_data():
+    """Test that adaptive KDE with gspread parameter performs well on anisotropic data."""
+    # Create an anisotropic dataset (elongated in one dimension)
+    np.random.seed(42)
+    n_samples = 200
+
+    # Generate data with high variance in x direction and low variance in y direction
+    x = np.random.normal(0, 3, n_samples)  # High variance
+    y = np.random.normal(0, 0.3, n_samples)  # Low variance
+    anisotropic_data = np.column_stack([x, y])
+
+    # Create a grid for evaluation
+    grid_size = 30
+    x_grid = np.linspace(-10, 10, grid_size)
+    y_grid = np.linspace(-2, 2, grid_size)
+    xx, yy = np.meshgrid(x_grid, y_grid)
+    grid_points = np.column_stack([xx.flatten(), yy.flatten()])
+
+    # Compute KDE with fixed bandwidth
+    fixed_bandwidth = 1.0  # Medium bandwidth
+    density_fixed = compute_kde(anisotropic_data, grid_points, constant_bandwidth=fixed_bandwidth, adaptive=False)
+
+    # Compute KDE with adaptive bandwidth and gspread parameter
+    gspread = 1.5  # Scale the covariance matrix by 1.5
+    density_adaptive_gspread = compute_kde(anisotropic_data, grid_points, alpha=0.5, adaptive=True, gspread=gspread)
+
+    # Calculate log-likelihood on a test set (hold-out data)
+    np.random.seed(43)  # Different seed for test data
+    n_test = 50
+    x_test = np.random.normal(0, 3, n_test)
+    y_test = np.random.normal(0, 0.3, n_test)
+    test_data = np.column_stack([x_test, y_test])
+
+    # Compute log-likelihood for both methods
+    log_likelihood_fixed = 0
+    log_likelihood_adaptive = 0
+
+    for point in test_data:
+        # Find closest grid point
+        distances = np.sum((grid_points - point) ** 2, axis=1)
+        closest_idx = np.argmin(distances)
+
+        # Add log density (with small epsilon to avoid log(0))
+        log_likelihood_fixed += np.log(density_fixed[closest_idx] + 1e-10)
+        log_likelihood_adaptive += np.log(density_adaptive_gspread[closest_idx] + 1e-10)
+
+    print(f"Log-likelihood fixed: {log_likelihood_fixed}")
+    print(f"Log-likelihood adaptive with gspread={gspread}: {log_likelihood_adaptive}")
+
+    # Adaptive KDE with gspread should have higher log-likelihood on anisotropic data
+    assert log_likelihood_adaptive > log_likelihood_fixed, (
+        "Adaptive KDE with gspread should perform better than fixed bandwidth KDE on anisotropic data"
+    )
+
+    # Compare different gspread values
+    gspread_values = [0.5, 1.0, 2.0]
+    densities = []
+    log_likelihoods = []
+
+    for gs in gspread_values:
+        density = compute_kde(anisotropic_data, grid_points, alpha=0.5, adaptive=True, gspread=gs)
+        densities.append(density)
+
+        # Calculate log-likelihood
+        ll = 0
+        for point in test_data:
+            distances = np.sum((grid_points - point) ** 2, axis=1)
+            closest_idx = np.argmin(distances)
+            ll += np.log(density[closest_idx] + 1e-10)
+
+        log_likelihoods.append(ll)
+        print(f"Log-likelihood with gspread={gs}: {ll}")
+
+    # Different gspread values should produce different results
+    assert len(set([round(ll, 5) for ll in log_likelihoods])) > 1, (
+        "Different gspread values should produce different log-likelihoods"
+    )

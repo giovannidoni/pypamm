@@ -10,22 +10,26 @@ from scipy.linalg import eigh, inv
 # -----------------------------------------------------------------------------
 cpdef compute_bandwidth(
     np.ndarray[np.float64_t, ndim=2] X,
-    double alpha=0.5,
     double constant_bandwidth=-1.0,
     double delta=1e-3,
     double tune=0.1,
-    int max_iter=50
+    int max_iter=50,
+    bint use_adaptive=True,
+    double fpoints=None,
+    double gspread=None
 ):
     """
-    Computes adaptive bandwidth estimation using bisection-based refinement.
+    Computes bandwidth estimation with optional adaptivity.
 
     Parameters:
     - X: (N, D) Data points.
-    - alpha: Adaptivity parameter.
-    - constant_bandwidth: If > 0, uses a fixed bandwidth instead.
+    - constant_bandwidth: If > 0, a fixed bandwidth is used.
     - delta: Convergence threshold.
     - tune: Initial step size for adaptation.
-    - max_iter: Maximum iterations to avoid infinite loops.
+    - max_iter: Maximum iterations for tuning.
+    - use_adaptive: Whether to use adaptive bandwidth computation.
+    - fpoints: Fraction of points for bandwidth localization.
+    - gspread: Spread factor for KDE scaling.
 
     Returns:
     - h: Global bandwidth (or fixed value if provided).
@@ -34,53 +38,75 @@ cpdef compute_bandwidth(
     cdef int N = X.shape[0]
     cdef int D = X.shape[1]
     cdef int i, iter_count
-    cdef double lim, prev_sigma2, new_sigma2
+    cdef double prev_sigma2, new_sigma2, n_local
 
-    if constant_bandwidth > 0:
+    # If a constant bandwidth is provided and adaptivity is disabled, return it directly
+    if constant_bandwidth > 0 and not use_adaptive:
         return constant_bandwidth, np.full(N, constant_bandwidth, dtype=np.float64)
 
+    # Ensure that only `fpoints` or `gspread` is used (mutual exclusivity)
+    if fpoints is not None and gspread is not None:
+        raise ValueError("Only one of `fpoints` or `gspread` can be set. Choose one.")
+
+    # Default `fpoints` and `gspread` based on availability
+    if fpoints is None and gspread is None:
+        fpoints = 0.05  # Default to 5% of points if neither is set
+
     # Compute initial covariance estimate
-    cdef np.ndarray[np.float64_t, ndim=2] Qi = np.cov(X, rowvar=False) + np.eye(D) * 1e-6  # Ensure stability
+    cdef np.ndarray[np.float64_t, ndim=2] Qi = np.cov(X, rowvar=False) + np.eye(D) * 1e-6  # Stability
 
-    # Compute Scott's Rule as starting bandwidth
-    cdef double n_local = N ** (-2.0 / (D + 4))
-    cdef np.ndarray[np.float64_t, ndim=2] Hi = (4.0 / (D + 2.0)) ** (2.0 / (D + 4.0)) * n_local * Qi
+    # **Adaptive Bandwidth Scaling:**
+    if fpoints is not None:
+        n_local = fpoints * N  # Fraction-based localization
+        Hi = (4.0 / (D + 2.0)) ** (2.0 / (D + 4.0)) * n_local ** (-2.0 / (D + 4.0)) * Qi
+    else:
+        n_local = N  # Default full dataset
+        Hi = gspread * Qi if gspread is not None else Qi  # Scale by `gspread`
 
+    # Inverse bandwidth matrix
+    Hiinv = np.linalg.inv(Hi)
+
+    # Initialize per-point bandwidths
     cdef np.ndarray[np.float64_t, ndim=1] sigma2 = np.full(N, np.mean(np.diag(Qi)), dtype=np.float64)
 
-    # Adaptive bandwidth refinement
-    for i in range(N):
-        iter_count = 0
-        prev_sigma2 = sigma2[i]
+    # **Apply Adaptive Bandwidth Refinement (if enabled)**
+    if use_adaptive and fpoints is not None:
+        for i in range(N):
+            iter_count = 0
+            prev_sigma2 = sigma2[i]
 
-        while iter_count < max_iter:
-            # Adjust sigma² iteratively
-            new_sigma2 = sigma2[i] + tune if alpha > 0.5 else sigma2[i] - tune
+            while iter_count < max_iter:
+                new_sigma2 = sigma2[i] + tune * (1 - alpha) if fpoints > 0.5 else sigma2[i] - tune * alpha
 
-            # Compute local density estimate
-            flocal = np.mean(np.linalg.norm(X - X[i], axis=1) < new_sigma2)
+                # Compute local density estimate
+                flocal = np.mean(np.linalg.norm(X - X[i], axis=1) < new_sigma2)
 
-            # Adjust step size using bisection
-            if flocal > alpha:
-                sigma2[i] -= tune / 2.0 ** iter_count
-            else:
-                sigma2[i] += tune / 2.0 ** iter_count
+                # Adjust bandwidth to reach `fpoints * N` density
+                if flocal > fpoints:
+                    sigma2[i] -= tune * alpha / (2.0 ** iter_count)
+                else:
+                    sigma2[i] += tune * (1 - alpha) / (2.0 ** iter_count)
 
-            iter_count += 1
+                iter_count += 1
 
-            # Stop if convergence reached
-            if abs(flocal - alpha) < delta:
-                break
+                # Stop if convergence reached
+                if abs(flocal - fpoints) < delta:
+                    break
 
-            # Detect oscillation (avoid infinite loops)
-            if abs(new_sigma2 - prev_sigma2) < 1e-6:
-                break
+                # Detect oscillation (avoid infinite loops)
+                if abs(new_sigma2 - prev_sigma2) < 1e-6:
+                    break
 
-            prev_sigma2 = new_sigma2
+                prev_sigma2 = new_sigma2
 
-        # Ensure minimum bandwidth size
-        sigma2[i] = max(sigma2[i], np.min(np.linalg.norm(X - X[i], axis=1)) + 1e-6)
+            # Ensure minimum bandwidth
+            sigma2[i] = max(sigma2[i], np.min(np.linalg.norm(X - X[i], axis=1)) + 1e-6)
 
+    # If `gspread` is used, scale bandwidth accordingly
+    if gspread is not None:
+        sigma2 *= gspread
+
+    # Compute final bandwidth values
     adaptive_bandwidths = np.sqrt(sigma2)
 
     return np.mean(adaptive_bandwidths), adaptive_bandwidths
@@ -162,7 +188,9 @@ cpdef compute_kde(
     np.ndarray[np.float64_t, ndim=2] grid,
     double alpha=0.5,
     bint adaptive=False,
-    double constant_bandwidth=-1.0
+    double constant_bandwidth=-1.0,
+    object fpoints=None,
+    object gspread=None
 ):
     """
     Computes Kernel Density Estimation (KDE) with optional adaptive bandwidth.
@@ -173,6 +201,8 @@ cpdef compute_kde(
     - alpha: Adaptivity parameter.
     - adaptive: Whether to use adaptive bandwidth.
     - constant_bandwidth: If > 0, use a fixed bandwidth instead of adaptive estimation.
+    - fpoints: Fraction of points for bandwidth localization.
+    - gspread: Spread factor for KDE scaling.
 
     Returns:
     - density: (G,) KDE density values at each grid point.
@@ -183,7 +213,9 @@ cpdef compute_kde(
     cdef int i, j
 
     # Compute bandwidths (adaptive or fixed)
-    h, adaptive_bandwidths = compute_bandwidth(X, alpha, constant_bandwidth)
+    h, adaptive_bandwidths = compute_bandwidth(X, alpha=alpha, constant_bandwidth=constant_bandwidth,
+                                              fpoints=fpoints, gspread=gspread,
+                                              use_adaptive=adaptive)
 
     # Allocate KDE result array
     cdef np.ndarray[np.float64_t, ndim=1] density = np.zeros(G, dtype=np.float64)
