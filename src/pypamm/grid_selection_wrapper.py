@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 
 def select_grid_points(
     X: NDArray[np.float64], ngrid: int, metric: str = "euclidean", inv_cov: NDArray[np.float64] | None = None
-) -> tuple[NDArray[np.int32], NDArray[np.float64]]:
+) -> NDArray[np.float64]:
     """
     Select grid points from a dataset.
 
