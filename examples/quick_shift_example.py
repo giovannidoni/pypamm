@@ -1,141 +1,117 @@
 #!/usr/bin/env python
 """
-Quick Shift Clustering Example
+Quick-Shift Clustering Example
 
-This example demonstrates how to use the quick_shift function
-from pypamm to perform mode-seeking clustering on a dataset.
+This example demonstrates how to use the Quick-Shift clustering algorithm
+from the PyPAMM library and compares it with hierarchical clustering.
+Quick-Shift is a mode-seeking algorithm that finds clusters by shifting
+points towards higher density regions.
 
-Quick Shift is useful for:
-- Finding clusters without specifying the number of clusters in advance
-- Identifying clusters of arbitrary shape
-- Handling noise and outliers
-- Finding modes in the data distribution
-
-Note: For large datasets, consider using the graph-based implementation
-demonstrated in quick_shift_graph_example.py
+The example uses a dataset defined in the example_config.yaml file and visualizes
+the clustering results using the plot_clusters function, comparing Quick-Shift
+with hierarchical clustering in a single image.
 """
+
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import gaussian_kde
+from data_generator import generate_dataset, load_config, plot_clusters
+from matplotlib.gridspec import GridSpec
+from sklearn.cluster import AgglomerativeClustering
 
-from pypamm import quick_shift
+from pypamm.density.kde import compute_kde
+from pypamm.quick_shift import quick_shift_clustering
 
-# Set random seed for reproducibility
-np.random.seed(42)
+# Load configuration from YAML file
+config = load_config("example_config")
 
+# Get visualization settings
+viz_config = config["visualization"]
+output_dir = viz_config["output_dir"]
+os.makedirs(output_dir, exist_ok=True)
 
-# Generate a synthetic dataset with multiple clusters
-def generate_multi_cluster_data(n_samples=500):
-    """Generate synthetic data with multiple clusters of different shapes."""
-    # Cluster 1: Gaussian cluster
-    cluster1 = np.random.randn(n_samples // 3, 2) * 0.5 + np.array([2, 2])
+this_config = config["examples"]["quick_shift_example"]
+n_datasets = len(this_config["datasets"])
+n_algorithms = len(this_config["algorithms"])
 
-    # Cluster 2: Elongated cluster
-    x2 = np.random.randn(n_samples // 3, 1) * 1.5
-    y2 = np.random.randn(n_samples // 3, 1) * 0.3
-    cluster2 = np.hstack([x2 + 6, y2 + 5])
+fig = plt.figure(figsize=(6 * n_datasets, 5 * n_algorithms))
+gs = GridSpec(n_datasets, n_algorithms, figure=fig)
 
-    # Cluster 3: Ring-shaped cluster
-    theta = np.random.uniform(0, 2 * np.pi, n_samples // 3)
-    r = np.random.normal(2, 0.2, n_samples // 3)
-    x3 = r * np.cos(theta) + 8
-    y3 = r * np.sin(theta) + 1
-    cluster3 = np.vstack([x3, y3]).T
+for i, dataset_name in enumerate(this_config["datasets"]):
+    for j, algorithm_name in enumerate(this_config["algorithms"]):
+        print(f"\nProcessing dataset: {dataset_name} with algorithm: {algorithm_name}")
 
-    # Combine all clusters
-    X = np.vstack([cluster1, cluster2, cluster3])
+        # Generate dataset
+        X = generate_dataset(dataset_name, "data_config")
 
-    return X
+        # Create subplot
+        ax = fig.add_subplot(gs[i, j])
 
+        # Get algorithm parameters
+        if algorithm_name == "hierarchical_clustering":
+            # Apply hierarchical clustering
+            hc_config = this_config["algorithms"][algorithm_name]
 
-# Generate data
-X = generate_multi_cluster_data(n_samples=600)
-print(f"Generated dataset with {X.shape[0]} points in {X.shape[1]}D space")
+            hc = AgglomerativeClustering(linkage=hc_config["linkage"])
+            labels = hc.fit_predict(X)
+            n_found_clusters = len(np.unique(labels))
 
-# Estimate density using KDE
-kde = gaussian_kde(X.T)
-prob = kde(X.T)
-prob = prob / np.max(prob)  # Normalize to [0, 1]
+            title = f"Hierarchical Clustering ({hc_config['linkage']})\n{n_found_clusters} clusters"
 
-# Create a figure for visualization
-plt.figure(figsize=(15, 10))
+        elif algorithm_name == "quick_shift":
+            # Apply Quick-Shift clustering
+            qs_config = this_config["algorithms"][algorithm_name]
 
-# Plot the original data with density
-plt.subplot(2, 2, 1)
-plt.scatter(X[:, 0], X[:, 1], c=prob, cmap="viridis", s=30)
-plt.colorbar(label="Normalized Density")
-plt.title("Original Data with Density Estimation")
-plt.xlabel("X")
-plt.ylabel("Y")
+            # Compute KDE for density estimation
+            density = compute_kde(X, X, qs_config["bandwidth"])
 
-# Try different lambda values for Quick Shift
-lambda_values = [0.5, 1.0, 2.0]
-max_dist = 3.0  # Maximum distance threshold
+            # Apply Quick-Shift clustering
+            labels, centers = quick_shift_clustering(
+                X, density, lambda_qs=qs_config["lambda_qs"], ngrid=qs_config["ngrid"], metric=qs_config["metric"]
+            )
+            n_found_clusters = len(np.unique(labels))
 
-for i, lambda_qs in enumerate(lambda_values):
-    # Run Quick Shift clustering
-    cluster_labels = quick_shift(X, prob=prob, ngrid=50, lambda_qs=lambda_qs, max_dist=max_dist)
+            title = (
+                f"Quick-Shift Clustering\n{n_found_clusters} clusters "
+                f"λ={qs_config['lambda_qs']}, max_dist={qs_config['max_dist']}"
+            )
+            print(f"Quick-Shift found {n_found_clusters} clusters")
 
-    # Plot the results
-    plt.subplot(2, 2, i + 2)
+        else:
+            # Unknown algorithm
+            print(f"Warning: Unknown algorithm '{algorithm_name}'")
+            continue
 
-    # Plot points colored by cluster
-    unique_labels = np.unique(cluster_labels)
-    colors = plt.cm.tab10(np.linspace(0, 1, len(unique_labels)))
+        # Common plotting parameters
+        plot_kwargs = {"edgecolors": "w", "linewidths": 0.5}
 
-    for j, label in enumerate(unique_labels):
-        mask = cluster_labels == label
-        plt.scatter(X[mask, 0], X[mask, 1], color=colors[j % 10], s=30, alpha=0.7, label=f"Cluster {j + 1}")
+        # Plot clustering results
+        plot_clusters(
+            X,
+            labels=labels,
+            use_tsne=False,
+            title=title,
+            cmap=viz_config["cmap"],
+            alpha=viz_config["alpha"],
+            point_size=viz_config["point_size"],
+            ax=ax,
+            plot_kwargs=plot_kwargs,
+        )
 
-    plt.title(f"Quick Shift Clustering\n(lambda={lambda_qs}, {len(unique_labels)} clusters)")
-    plt.xlabel("X")
-    plt.ylabel("Y")
+        # Add dataset name as row title if first column
+        if j == 0:
+            ax.set_ylabel(f"Dataset: {dataset_name}", fontsize=12)
 
-    # Print some statistics
-    print(f"\nQuick Shift with lambda={lambda_qs}:")
-    print(f"  - Number of clusters: {len(unique_labels)}")
+# Add main title
+fig.suptitle("Clustering Algorithm Comparison", fontsize=16)
 
-    # Count points in each cluster
-    for j, label in enumerate(unique_labels):
-        count = np.sum(cluster_labels == label)
-        print(f"  - Cluster {j + 1}: {count} points")
+# Adjust layout
+plt.tight_layout()  # Make room for the suptitle
 
-plt.tight_layout()
-plt.savefig("quick_shift_example.png")
-print("Figure saved as 'quick_shift_example.png'")
+# Save the figure
+output_path = f"{output_dir}/quick_shift_example.png"
+plt.savefig(output_path, dpi=viz_config["dpi"], bbox_inches="tight")
+print(f"\nVisualization saved to {output_path}")
 
-# Print explanation of the Quick Shift algorithm
-print("\nExplanation of Quick Shift Clustering:")
-print("------------------------------------")
-print("Quick Shift is a mode-seeking clustering algorithm that:")
-print("1. Estimates the density of the data points")
-print("2. Shifts each point towards the nearest neighbor with higher density")
-print("3. Forms clusters by connecting points that shift to the same mode")
-
-print("\nKey Parameters:")
-print("- lambda_qs: Controls the tradeoff between density and distance")
-print("  - Smaller values prioritize density (more clusters)")
-print("  - Larger values prioritize distance (fewer clusters)")
-print("- max_dist: Maximum distance threshold for connecting points")
-print("  - Limits the maximum shift distance")
-print("  - Helps prevent connecting distant clusters")
-print("- ngrid: Number of grid points for density estimation")
-print("  - Higher values provide more accurate density estimation")
-print("- neighbor_graph: Optional pre-computed neighbor graph")
-print("  - Significantly improves performance for large datasets")
-print("  - See quick_shift_graph_example.py for details")
-
-print("\nAdvantages of Quick Shift:")
-print("- Automatically determines the number of clusters")
-print("- Can find clusters of arbitrary shape")
-print("- Robust to noise and outliers")
-print("- Based on density estimation, which is intuitive")
-print("- Efficient implementation for large datasets (with neighbor_graph)")
-
-print("\nLimitations:")
-print("- Sensitive to parameter settings")
-print("- Requires density estimation, which can be computationally expensive")
-print("- May struggle with clusters of varying densities")
-
-print("\nExample completed successfully!")
+print("\nClustering comparison example completed successfully!")

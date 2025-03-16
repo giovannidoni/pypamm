@@ -1,0 +1,29 @@
+# PyPAMM Examples Configuration File
+# This file contains configurations for all example scripts
+
+# General visualization settings
+visualization:
+  figsize: [12, 10]
+  dpi: 300
+  cmap: "viridis"
+  alpha: 0.8
+  point_size: 30
+  output_dir: "docs/images"
+
+datasets: &data
+  - dataset_high_noise
+  - dataset_high_dim
+
+# Example-specific configurations
+examples:
+  quick_shift_example:
+    datasets: *data
+    algorithms:
+      hierarchical_clustering:
+        linkage: "ward"
+      quick_shift:
+        bandwidth: 0.1
+        lambda_qs: 1.0
+        max_dist: 0.5
+        ngrid: 100
+        metric: "euclidean"
