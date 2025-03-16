@@ -6,14 +6,103 @@ from scipy.linalg import eigh, inv
 
 
 # -----------------------------------------------------------------------------
-# 1️) Gaussian Parameter Preparation
+# 1) Compute bandwidth
 # -----------------------------------------------------------------------------
-cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
+cpdef compute_bandwidth(
+    np.ndarray[np.float64_t, ndim=2] X,
+    double alpha=0.5,
+    double constant_bandwidth=-1.0,
+    double delta=1e-3,
+    double tune=0.1,
+    int max_iter=50
+):
     """
-    Computes mean, covariance, bandwidth matrix (Hi), and inverse bandwidth (Hiinv).
+    Computes adaptive bandwidth estimation using bisection-based refinement.
+
+    Parameters:
+    - X: (N, D) Data points.
+    - alpha: Adaptivity parameter.
+    - constant_bandwidth: If > 0, uses a fixed bandwidth instead.
+    - delta: Convergence threshold.
+    - tune: Initial step size for adaptation.
+    - max_iter: Maximum iterations to avoid infinite loops.
+
+    Returns:
+    - h: Global bandwidth (or fixed value if provided).
+    - adaptive_bandwidths: (N,) Per-point adaptive bandwidths.
+    """
+    cdef int N = X.shape[0]
+    cdef int D = X.shape[1]
+    cdef int i, iter_count
+    cdef double lim, prev_sigma2, new_sigma2
+
+    if constant_bandwidth > 0:
+        return constant_bandwidth, np.full(N, constant_bandwidth, dtype=np.float64)
+
+    # Compute initial covariance estimate
+    cdef np.ndarray[np.float64_t, ndim=2] Qi = np.cov(X, rowvar=False) + np.eye(D) * 1e-6  # Ensure stability
+
+    # Compute Scott's Rule as starting bandwidth
+    cdef double n_local = N ** (-2.0 / (D + 4))
+    cdef np.ndarray[np.float64_t, ndim=2] Hi = (4.0 / (D + 2.0)) ** (2.0 / (D + 4.0)) * n_local * Qi
+
+    cdef np.ndarray[np.float64_t, ndim=1] sigma2 = np.full(N, np.mean(np.diag(Qi)), dtype=np.float64)
+
+    # Adaptive bandwidth refinement
+    for i in range(N):
+        iter_count = 0
+        prev_sigma2 = sigma2[i]
+
+        while iter_count < max_iter:
+            # Adjust sigma² iteratively
+            new_sigma2 = sigma2[i] + tune if alpha > 0.5 else sigma2[i] - tune
+
+            # Compute local density estimate
+            flocal = np.mean(np.linalg.norm(X - X[i], axis=1) < new_sigma2)
+
+            # Adjust step size using bisection
+            if flocal > alpha:
+                sigma2[i] -= tune / 2.0 ** iter_count
+            else:
+                sigma2[i] += tune / 2.0 ** iter_count
+
+            iter_count += 1
+
+            # Stop if convergence reached
+            if abs(flocal - alpha) < delta:
+                break
+
+            # Detect oscillation (avoid infinite loops)
+            if abs(new_sigma2 - prev_sigma2) < 1e-6:
+                break
+
+            prev_sigma2 = new_sigma2
+
+        # Ensure minimum bandwidth size
+        sigma2[i] = max(sigma2[i], np.min(np.linalg.norm(X - X[i], axis=1)) + 1e-6)
+
+    adaptive_bandwidths = np.sqrt(sigma2)
+
+    return np.mean(adaptive_bandwidths), adaptive_bandwidths
+
+
+# -----------------------------------------------------------------------------
+# 2) Gaussian Parameter Preparation
+# -----------------------------------------------------------------------------
+cpdef gauss_prepare(
+    np.ndarray[np.float64_t, ndim=2] X,
+    double alpha=0.5,
+    bint adaptive=False,
+    double constant_bandwidth=-1.0
+):
+    """
+    Computes mean, covariance, and adaptive bandwidth matrix.
 
     Parameters:
     - X: (N, D) NumPy array of data points.
+    - alpha: Adaptivity parameter for bandwidth.
+    - adaptive: Whether to use adaptive bandwidth.
+    - constant_bandwidth: If > 0, uses a fixed bandwidth instead.
 
     Returns:
     - mean: (D,) Mean vector.
@@ -32,40 +121,32 @@ cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
     # Compute covariance matrix
     cdef np.ndarray[np.float64_t, ndim=2] cov
 
-    # Handle edge case: single point
     if N == 1:
-        # For a single point, use identity covariance
-        cov = np.eye(D, dtype=np.float64)
-    elif D == 1:
-        # For 1D data, compute variance manually
-        cov = np.array([[np.var(X.flatten())]], dtype=np.float64)
+        cov = np.eye(D, dtype=np.float64)  # Use identity covariance for single point
     else:
-        # Normal case: compute covariance
-        try:
-            cov = np.cov(X, rowvar=False)
-
-            # Handle potential numerical issues
-            if np.any(np.isnan(cov)) or np.any(np.isinf(cov)):
-                cov = np.eye(D, dtype=np.float64)
-        except:
-            # Fallback to identity matrix if covariance computation fails
-            cov = np.eye(D, dtype=np.float64)
+        cov = np.cov(X, rowvar=False)
+        cov += np.eye(D) * 1e-6  # Ensure numerical stability
 
     # Compute inverse covariance matrix
-    cdef np.ndarray[np.float64_t, ndim=2] inv_cov = np.linalg.inv(cov)  # Stable inversion
+    cdef np.ndarray[np.float64_t, ndim=2] inv_cov = np.linalg.inv(cov)
 
-    # Compute eigenvalues and eigenvectors of covariance
+    # Compute eigenvalues
     cdef np.ndarray[np.float64_t, ndim=1] eigvals
     cdef np.ndarray[np.float64_t, ndim=2] eigvecs
     eigvals, eigvecs = np.linalg.eigh(cov)
+    eigvals = np.maximum(eigvals, 1e-10)  # Avoid zero or negative eigenvalues
 
-    # Ensure positive eigenvalues (numerical stability)
-    eigvals = np.maximum(eigvals, 1e-10)
+    # Compute bandwidth matrix Hi
+    cdef np.ndarray[np.float64_t, ndim=2] Hi
+    cdef double h
+    cdef np.ndarray[np.float64_t, ndim=1] adaptive_bandwidths
 
-    # Compute bandwidth matrix Hi (scaled eigenvalues)
-    cdef np.ndarray[np.float64_t, ndim=2] Hi = np.zeros((D, D), dtype=np.float64)
-    for i in range(D):
-        Hi[i, i] = sqrt(eigvals[i])  # Scale bandwidth by sqrt of eigenvalues
+    if adaptive:
+        h, adaptive_bandwidths = compute_bandwidth(X, alpha=alpha, constant_bandwidth=constant_bandwidth)
+    else:
+        h = constant_bandwidth if constant_bandwidth > 0 else 1.0  # Use fixed bandwidth
+
+    Hi = np.diag(h * np.sqrt(eigvals))
 
     # Compute inverse bandwidth matrix Hiinv
     cdef np.ndarray[np.float64_t, ndim=2] Hiinv = np.linalg.inv(Hi)
@@ -74,82 +155,94 @@ cpdef gauss_prepare(np.ndarray[np.float64_t, ndim=2] X):
 
 
 # -----------------------------------------------------------------------------
-# 2️) KDE Computation
+# 3) KDE Computation
 # -----------------------------------------------------------------------------
-cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, ndim=2] grid, double bandwidth):
+cpdef compute_kde(
+    np.ndarray[np.float64_t, ndim=2] X,
+    np.ndarray[np.float64_t, ndim=2] grid,
+    double alpha=0.5,
+    bint adaptive=False,
+    double constant_bandwidth=-1.0
+):
     """
-    Computes Kernel Density Estimation (KDE) with covariance-adaptive bandwidth.
+    Computes Kernel Density Estimation (KDE) with optional adaptive bandwidth.
 
     Parameters:
     - X: (N, D) Data points.
     - grid: (G, D) Grid points where KDE is evaluated.
-    - bandwidth: Scaling factor for the covariance-based bandwidth.
+    - alpha: Adaptivity parameter.
+    - adaptive: Whether to use adaptive bandwidth.
+    - constant_bandwidth: If > 0, use a fixed bandwidth instead of adaptive estimation.
 
     Returns:
     - density: (G,) KDE density values at each grid point.
     """
-    # Ensure arrays are float64
-    X = np.asarray(X, dtype=np.float64)
-    grid = np.asarray(grid, dtype=np.float64)
-
     cdef int N = X.shape[0]
-    cdef int D = X.shape[1]
     cdef int G = grid.shape[0]
-
-    # Compute covariance-based bandwidth
-    mean, cov, inv_cov, eigvals, Hi, Hiinv = gauss_prepare(X)
-
-    # Scale covariance by bandwidth parameter
-    cov = cov * bandwidth
-    inv_cov = inv_cov / bandwidth
-    Hi = Hi * sqrt(bandwidth)
-    Hiinv = Hiinv / sqrt(bandwidth)
-
-    # Compute Mahalanobis KDE
-    cdef np.ndarray[np.float64_t, ndim=1] density = np.zeros(G, dtype=np.float64)
-    cdef double norm_factor = (1 / (sqrt(2 * np.pi))) ** D
-
+    cdef int D = X.shape[1]
     cdef int i, j
+
+    # Compute bandwidths (adaptive or fixed)
+    h, adaptive_bandwidths = compute_bandwidth(X, alpha, constant_bandwidth)
+
+    # Allocate KDE result array
+    cdef np.ndarray[np.float64_t, ndim=1] density = np.zeros(G, dtype=np.float64)
+
+    # Compute KDE
+    cdef double norm_factor
     cdef double dist_sq, weight
     cdef np.ndarray[np.float64_t, ndim=1] diff
 
     for i in range(G):
         for j in range(N):
-            # Compute Mahalanobis distance with bandwidth scaling
-            diff = np.dot(Hiinv, (grid[i] - X[j]))
-            dist_sq = np.dot(diff, diff)  # Mahalanobis distance squared
+            h_i = adaptive_bandwidths[j] if adaptive else h  # Use per-point bandwidth if adaptive
+            norm_factor = (1 / (sqrt(2 * np.pi) * h_i) ** D)  # Normalize with adaptive bandwidth
+            diff = (grid[i] - X[j]) / h_i
+            dist_sq = np.dot(diff, diff)
             weight = np.exp(-0.5 * dist_sq)
-            density[i] += weight
+            density[i] += weight * norm_factor
 
-        density[i] *= norm_factor / (N * np.linalg.det(Hi))  # Adjust normalization
+        density[i] /= N  # Normalize by number of points
 
     return density
 
 
 # -----------------------------------------------------------------------------
-# 3️) KDE Cutoff Calculation
+# 4) KDE Cutoff Calculation
 # -----------------------------------------------------------------------------
-cpdef double kde_cutoff(int D):
+cpdef double kde_cutoff(int D, double alpha=0.5):
     """
     Computes KDE cutoff (`kdecut2`) for the given dimensionality.
+
+    Parameters:
+    - D: Dimensionality of data.
+    - alpha: Adaptivity parameter.
 
     Returns:
     - kdecut2: KDE squared cutoff.
     """
-    return 9.0 * (sqrt(D) + 1.0) ** 2
+    return 9.0 * (sqrt(D) + alpha) ** 2
 
 
 # -----------------------------------------------------------------------------
-# 4️) KDE Bootstrap Error Estimation
+# 5) KDE Bootstrap Error Estimation
 # -----------------------------------------------------------------------------
-cpdef kde_bootstrap_error(np.ndarray[np.float64_t, ndim=2] X, int n_bootstrap, double bandwidth):
+cpdef kde_bootstrap_error(
+    np.ndarray[np.float64_t, ndim=2] X,
+    int n_bootstrap,
+    double alpha=0.5,
+    bint adaptive=False,
+    double constant_bandwidth=-1.0
+):
     """
     Estimates KDE statistical error using bootstrap resampling.
 
     Parameters:
     - X: (N, D) Data points.
     - n_bootstrap: Number of bootstrap runs.
-    - bandwidth: Bandwidth parameter.
+    - alpha: Adaptivity parameter for bandwidth.
+    - adaptive: Whether to use adaptive bandwidth.
+    - constant_bandwidth: If > 0, uses a fixed bandwidth instead.
 
     Returns:
     - mean_kde: Mean KDE values.
@@ -164,7 +257,7 @@ cpdef kde_bootstrap_error(np.ndarray[np.float64_t, ndim=2] X, int n_bootstrap, d
     cdef int b, i
     for b in range(n_bootstrap):
         boot_sample = X[np.random.choice(N, N, replace=True)]
-        boot_kdes[b] = compute_kde(boot_sample, grid, bandwidth)
+        boot_kdes[b] = compute_kde(boot_sample, grid, alpha, adaptive, constant_bandwidth)
 
     cdef np.ndarray[np.float64_t, ndim=1] mean_kde = np.mean(boot_kdes, axis=0)
     cdef np.ndarray[np.float64_t, ndim=1] std_kde = np.std(boot_kdes, axis=0)
@@ -173,7 +266,7 @@ cpdef kde_bootstrap_error(np.ndarray[np.float64_t, ndim=2] X, int n_bootstrap, d
 
 
 # -----------------------------------------------------------------------------
-# 5️) KDE Output Storage
+# 6) KDE Output Storage
 # -----------------------------------------------------------------------------
 cpdef kde_output(np.ndarray[np.float64_t, ndim=1] density, np.ndarray[np.float64_t, ndim=1] std_kde):
     """
