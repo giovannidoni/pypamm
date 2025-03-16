@@ -389,11 +389,90 @@ Then you can run any example using Poetry:
 poetry run python examples/grid_selection_example.py
 poetry run python examples/neighbor_graph_example.py
 poetry run python examples/quick_shift_example.py
+poetry run python examples/quick_shift_graph_example.py
 poetry run python examples/mst_example.py
 poetry run python examples/pipeline_example.py
+poetry run python examples/pamm_clustering_example.py
 ```
 
 Each example generates visualizations that are saved as PNG files in the current directory. The examples also print explanations and statistics to the console to help understand the algorithms and their parameters.
+
+## PAMM Clustering
+
+**File:** `examples/pamm_clustering_example.py`
+
+### Purpose
+
+PAMM (Probabilistic Analysis of Molecular Motifs) is a robust clustering algorithm that:
+1. Uses grid selection to reduce the dataset size
+2. Applies Quick Shift clustering to find density modes
+3. Optionally uses bootstrapping to improve robustness
+4. Merges similar clusters based on adjacency
+
+### Key Features
+
+- Robust to noise and outliers
+- Automatically determines the number of clusters
+- Can find clusters of arbitrary shape
+- Provides probabilistic assignments
+- Efficient implementation for large datasets
+- Optional bootstrapping for improved stability
+
+### Key Parameters
+
+- **n_grid**: Number of grid points for density estimation
+- **k_neighbors**: Number of neighbors for graph construction
+- **merge_threshold**: Threshold for merging similar clusters
+- **bootstrap**: Whether to use bootstrapping for robustness
+- **n_bootstrap**: Number of bootstrap iterations
+- **graph_type**: Type of neighbor graph to use for Quick Shift clustering
+
+### Example Code
+
+```python
+import numpy as np
+from pypamm.clustering.pamm import PAMMCluster
+
+# Generate data
+X = np.random.rand(1000, 2) * 10
+
+# Initialize PAMM clusterer
+pamm = PAMMCluster(
+    n_grid=30,
+    k_neighbors=5,
+    metric="euclidean",
+    merge_threshold=0.8,
+    bootstrap=True,
+    n_bootstrap=10,
+    n_jobs=-1,  # Use all available cores
+    graph_type="gabriel",  # Optional: Use Gabriel graph for efficient clustering
+)
+
+# Run PAMM clustering
+cluster_labels = pamm.fit(X)
+
+# For a single iteration without bootstrapping
+cluster_labels, probabilities = pamm.fit(X, single_iteration=True)
+```
+
+### Expected Output
+
+The script generates a visualization showing:
+- The original data with noise
+- Clustering results with different approaches:
+  - Single iteration (no bootstrap)
+  - Bootstrap with merging
+  - Single iteration with Gabriel graph
+
+![PAMM Clustering Example](images/pamm_clustering_example.png)
+
+### When to Use
+
+- When dealing with noisy data
+- When robust clustering is needed
+- For molecular dynamics simulations
+- When probabilistic assignments are desired
+- For large datasets (with graph-based optimization)
 
 ## Dependencies
 

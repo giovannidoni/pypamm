@@ -82,4 +82,4 @@ def quick_shift_clustering(
         if nearest_neighbor[i] != -1:
             idxroot[i] = idxroot[nearest_neighbor[i]]
 
-    return idxroot, np.unique(idxroot)
+    return final_labels, unique_roots

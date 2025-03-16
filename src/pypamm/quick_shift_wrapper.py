@@ -53,7 +53,7 @@ def quick_shift(
     X = np.asarray(X, dtype=np.float64)
     n_samples = X.shape[0]
 
-    # If prob is None, use uniform probabilities
+    # If prob is None, use uniform probabilities with small random variations
     if prob is None:
         prob = np.ones(n_samples, dtype=np.float64) / n_samples
     else:

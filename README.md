@@ -8,7 +8,7 @@ PyPAMM is a Python implementation of the Probabilistic Analysis of Molecular Mot
 
 ## About PAMM
 
-PAMM (Probabilistic Analysis of Molecular Motifs) is a statistical analysis method that:
+PAMM (Probabilistic Analysis of Molecular Motifs) is clustering algorithm originally develop for the analusys of molecular simulations:
 
 - Identifies recurring patterns or "motifs" in molecular dynamics data
 - Uses density-based clustering to find natural groupings in high-dimensional data
@@ -70,6 +70,7 @@ poetry run python examples/quick_shift_example.py
 poetry run python examples/quick_shift_graph_example.py
 poetry run python examples/mst_example.py
 poetry run python examples/pipeline_example.py
+poetry run python examples/pamm_clustering_example.py
 ```
 
 ### Available Examples
@@ -80,6 +81,7 @@ poetry run python examples/pipeline_example.py
   - **Graph-based Quick Shift**: Shows how to use pre-computed neighbor graphs for faster clustering
 - **Minimum Spanning Tree (MST)**: Demonstrates how to build and use MSTs
 - **Complete Pipeline**: Shows how to combine multiple algorithms in a data analysis pipeline
+- **PAMM Clustering**: Demonstrates the complete PAMM algorithm with bootstrapping and graph-based optimization
 
 For more detailed information about the examples, see the [Examples Documentation](docs/examples.md).
 
@@ -204,17 +206,6 @@ If you use PyPAMM in your research, please cite:
   number={23},
   year={2014},
   publisher={AIP Publishing}
-}
-```
-
-And also cite this Python implementation:
-
-```
-@software{pypamm,
-  title={PyPAMM: Python Implementation of Probabilistic Analysis of Molecular Motifs},
-  author={Your Name},
-  url={https://github.com/yourusername/pypamm},
-  year={2023}
 }
 ```
 
