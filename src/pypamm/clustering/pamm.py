@@ -95,7 +95,7 @@ class PAMMCluster:
         _, grid_points = select_grid_points(X, self.n_grid, self.metric)
 
         # Compute KDE for density estimation
-        prob = compute_kde(X, X, self.bandwidth)
+        prob = compute_kde(X, X, self.bandwidth, adaptive=False)
         self.kde_density_ = prob  # Store KDE values for later use
 
         # Use neighbor graph if requested

@@ -39,7 +39,7 @@ ngrid = kde_config.get("ngrid", 100)  # Get grid size from config
 
 # Create figure layout based on number of datasets and bandwidths
 n_datasets = len(datasets)
-n_bandwidths = len(bandwidths)
+n_bandwidths = len(bandwidths) + 1
 fig = plt.figure(figsize=(5 * n_bandwidths, 5 * n_datasets))
 gs = GridSpec(n_datasets, n_bandwidths, figure=fig)
 
@@ -82,17 +82,20 @@ for i, dataset_name in enumerate(datasets):
             padding = np.zeros((viz_grid.shape[0], X.shape[1] - 2))
             viz_grid = np.hstack([viz_grid, padding])
 
-    for j, bandwidth in enumerate(bandwidths):
+    for j, bandwidth in enumerate(bandwidths + ["adaptive"]):
         print(f"  Computing KDE with bandwidth={bandwidth}")
 
         # Create subplot
         ax = fig.add_subplot(gs[i, j])
 
         # Compute KDE on the grid points
-        density = compute_kde(X, grid_points, bandwidth)
+        if bandwidth == "adaptive":
+            density = compute_kde(X, grid_points, adaptive=True)
+        else:
+            density = compute_kde(X, grid_points, constant_bandwidth=bandwidth, adaptive=False)
 
         # Compute KDE on the visualization grid
-        viz_density = compute_kde(X, viz_grid, bandwidth)
+        viz_density = compute_kde(X, viz_grid, constant_bandwidth=0.1, adaptive=False)
 
         density_grid = viz_density.reshape(xx.shape)
 

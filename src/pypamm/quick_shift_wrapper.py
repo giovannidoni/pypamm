@@ -138,6 +138,7 @@ def quick_shift_kde(
     lambda_qs: float = 1.0,
     max_dist: float = np.inf,
     neighbor_graph: spmatrix | None = None,
+    adaptive: bool = True,
 ) -> NDArray[np.int32]:
     """
     KDE-enhanced Quick-Shift clustering algorithm.
@@ -150,7 +151,8 @@ def quick_shift_kde(
     X : array-like, shape (n_samples, n_features)
         Input data points.
     bandwidth : float
-        Bandwidth parameter for KDE.
+        Bandwidth parameter for KDE. If adaptive=True, this is used as the alpha parameter
+        for adaptive bandwidth. Otherwise, it's used as a fixed bandwidth.
     ngrid : int, default=100
         Number of grid points.
     metric : str, default="euclidean"
@@ -162,6 +164,9 @@ def quick_shift_kde(
     neighbor_graph : scipy.sparse matrix, optional
         Pre-computed neighbor graph. If provided, this will be used instead of computing
         distances between all points.
+    adaptive : bool, default=True
+        Whether to use adaptive bandwidth for KDE. If True, the bandwidth parameter is used
+        as the alpha parameter for adaptive bandwidth. If False, it's used as a fixed bandwidth.
 
     Returns:
     -------
@@ -175,7 +180,12 @@ def quick_shift_kde(
     from pypamm.density.kde import compute_kde
 
     # Compute probability densities using KDE
-    prob = compute_kde(X, X, bandwidth)
+    if adaptive:
+        # Use bandwidth as alpha parameter for adaptive bandwidth
+        prob = compute_kde(X, X, alpha=bandwidth, adaptive=True)
+    else:
+        # Use bandwidth as fixed bandwidth
+        prob = compute_kde(X, X, constant_bandwidth=bandwidth, adaptive=False)
 
     # Call the unified quick_shift with pre-computed probabilities
     return quick_shift(X, prob, ngrid, metric, lambda_qs, max_dist, neighbor_graph)

@@ -64,7 +64,7 @@ for i, dataset_name in enumerate(this_config["datasets"]):
             qs_config = this_config["algorithms"][algorithm_name]
 
             # Compute KDE for density estimation
-            density = compute_kde(X, X, qs_config["bandwidth"])
+            density = compute_kde(X, X, qs_config["bandwidth"], adaptive=True)
 
             # Apply Quick-Shift clustering
             labels, centers = quick_shift_clustering(

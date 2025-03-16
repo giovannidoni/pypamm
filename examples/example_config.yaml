@@ -33,3 +33,4 @@ examples:
       bandwidths: [0.1, 0.2, 0.3]
       ngrid: 100
       metric: "euclidean"
+      adaptive: true  # Whether to use adaptive bandwidth
