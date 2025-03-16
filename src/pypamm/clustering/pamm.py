@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 from joblib import Parallel, delayed
 from numpy.typing import ArrayLike, NDArray
@@ -73,7 +75,7 @@ class PAMMCluster:
         self.bootstrap_probabilities_ = None
         self.neighbor_graph_ = None
 
-    def _single_run(self, X: NDArray[np.float64]) -> tuple[NDArray[np.int32], NDArray[np.float64]]:
+    def _single_run(self, X: NDArray[np.float64]) -> Tuple[NDArray[np.int32], NDArray[np.float64]]:
         """
         Run a single clustering pipeline iteration.
 

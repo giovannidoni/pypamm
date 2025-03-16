@@ -1,0 +1,103 @@
+# PyPAMM Configuration File
+# This file contains configurations for all examples
+
+# Dataset configurations
+dataset_default:
+  n_clusters: 4
+  n_dimensions: 2
+  cluster_std: 0.1
+  cluster_uniformity: 1.0
+  population_uniformity: 1.0
+  noise_level: 0.1
+  n_samples: 1000
+  random_seed: 42
+  description: "Default dataset with 4 spherical clusters in 2D"
+
+dataset_high_noise:
+  n_clusters: 4
+  n_dimensions: 2
+  cluster_std: 0.1
+  cluster_uniformity: 1.0
+  population_uniformity: 1.0
+  noise_level: 0.3
+  n_samples: 1000
+  random_seed: 42
+  description: "Dataset with high noise level (30%)"
+
+dataset_many_clusters:
+  n_clusters: 10
+  n_dimensions: 2
+  cluster_std: 0.05
+  cluster_uniformity: 1.0
+  population_uniformity: 1.0
+  noise_level: 0.1
+  n_samples: 2000
+  random_seed: 42
+  description: "Dataset with 10 small clusters"
+
+dataset_overlapping:
+  n_clusters: 3
+  n_dimensions: 2
+  cluster_std: 0.2
+  cluster_uniformity: 1.0
+  population_uniformity: 1.0
+  noise_level: 0.1
+  n_samples: 1000
+  random_seed: 42
+  description: "Dataset with overlapping clusters"
+
+dataset_high_dim:
+  n_clusters: 8
+  n_dimensions: 100
+  cluster_std: 0.1
+  cluster_uniformity: 1.0
+  population_uniformity: 1.0
+  noise_level: 0.5
+  n_samples: 2000
+  random_seed: 42
+  description: "High-dimensional dataset with 8 clusters in 100D space"
+
+dataset_high_dim_non_uniform:
+  n_clusters: 6
+  n_dimensions: 100
+  cluster_std: 0.1
+  cluster_uniformity: 0.2
+  population_uniformity: 1.0
+  noise_level: 0.6
+  n_samples: 2000
+  random_seed: 42
+  description: "High-dimensional dataset with non-uniform clusters in 100D space"
+
+# New datasets with non-uniform population distribution
+dataset_uneven_population:
+  n_clusters: 5
+  n_dimensions: 2
+  cluster_std: 0.1
+  cluster_uniformity: 1.0
+  population_uniformity: 0.3
+  noise_level: 0.1
+  n_samples: 2000
+  random_seed: 105
+  description: "Dataset with uneven cluster populations (one dominant cluster)"
+
+dataset_very_uneven_population:
+  n_clusters: 10
+  n_dimensions: 20
+  cluster_std: 0.2
+  cluster_uniformity: 0.1
+  population_uniformity: 0.1
+  noise_level: 0.2
+  n_samples: 2000
+  random_seed: 101
+  description: "Dataset with extremely uneven cluster populations (one large cluster, others minimal)"
+
+dataset_mixed_non_uniform:
+  n_clusters: 6
+  n_dimensions: 2
+  cluster_std: 0.1
+  cluster_uniformity: 0.3
+  population_uniformity: 0.3
+  noise_level: 0.1
+  n_samples: 1500
+  random_seed: 42
+  description: "Dataset with both non-uniform shapes and non-uniform populations"

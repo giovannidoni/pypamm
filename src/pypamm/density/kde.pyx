@@ -125,6 +125,7 @@ cpdef compute_kde(np.ndarray[np.float64_t, ndim=2] X, np.ndarray[np.float64_t, n
 
     return density
 
+
 # -----------------------------------------------------------------------------
 # 3️) KDE Cutoff Calculation
 # -----------------------------------------------------------------------------
@@ -136,6 +137,7 @@ cpdef double kde_cutoff(int D):
     - kdecut2: KDE squared cutoff.
     """
     return 9.0 * (sqrt(D) + 1.0) ** 2
+
 
 # -----------------------------------------------------------------------------
 # 4️) KDE Bootstrap Error Estimation
@@ -168,6 +170,7 @@ cpdef kde_bootstrap_error(np.ndarray[np.float64_t, ndim=2] X, int n_bootstrap, d
     cdef np.ndarray[np.float64_t, ndim=1] std_kde = np.std(boot_kdes, axis=0)
 
     return mean_kde, std_kde
+
 
 # -----------------------------------------------------------------------------
 # 5️) KDE Output Storage

@@ -31,11 +31,12 @@ def quick_shift_clustering(
     - max_dist: Maximum distance threshold
 
     Returns:
-    - idxroot: Cluster assignment for each point
+    - cluster_labels: Cluster assignment for each point
     - cluster_centers: Array of unique cluster centers
     """
     cdef Py_ssize_t N = X.shape[0]
-    cdef Py_ssize_t i, j
+    cdef Py_ssize_t D = X.shape[1]
+    cdef Py_ssize_t i, j, d
 
     # Initialize cluster labels (each point starts as its own cluster)
     cdef np.ndarray[np.int32_t, ndim=1] idxroot = np.arange(N, dtype=np.int32)
@@ -50,14 +51,18 @@ def quick_shift_clustering(
     # Sort points by density (higher density first)
     sorted_indices = np.argsort(-prob)
 
+    # Create a dummy parameter for the distance function
+    cdef np.ndarray[np.float64_t, ndim=2] dummy_param = np.zeros((1, 1), dtype=np.float64)
+    cdef double dist_val
+
     # Use neighbor graph if available
     if neighbor_graph is not None:
         for i in sorted_indices:
             for j in neighbor_graph.indices[neighbor_graph.indptr[i]:neighbor_graph.indptr[i + 1]]:
-                if prob[j] > prob[i]:  # Follow the density gradient
-                    d = dist_func(X[i], X[j], np.zeros((1, 1)))
-                    if d < min_dist[i]:
-                        min_dist[i] = d
+                if prob[j] > prob[i] * lambda_qs:  # Apply lambda_qs scaling factor
+                    dist_val = dist_func(X[i], X[j], dummy_param)
+                    if dist_val < min_dist[i] and dist_val <= max_dist:
+                        min_dist[i] = dist_val
                         nearest_neighbor[i] = j
     else:
         # Brute-force method (if no graph provided)
@@ -67,10 +72,10 @@ def quick_shift_clustering(
             for j in range(N):
                 if i == j:
                     continue  # Skip self
-                if prob[j] > prob[i]:  # Follow the density gradient
-                    d = dist_func(X[i], X[j], np.zeros((1, 1)))
-                    if d < min_dist_i:
-                        min_dist_i = d
+                if prob[j] > prob[i] * lambda_qs:  # Apply lambda_qs scaling factor
+                    dist_val = dist_func(X[i], X[j], dummy_param)
+                    if dist_val < min_dist_i and dist_val <= max_dist:
+                        min_dist_i = dist_val
                         nearest_idx = j
 
             if nearest_idx != -1:
@@ -82,4 +87,27 @@ def quick_shift_clustering(
         if nearest_neighbor[i] != -1:
             idxroot[i] = idxroot[nearest_neighbor[i]]
 
-    return idxroot, np.unique(idxroot)
+    # Get unique cluster roots
+    unique_roots, inverse = np.unique(idxroot, return_inverse=True)
+
+    # Create cluster labels from inverse mapping
+    cdef np.ndarray[np.int32_t, ndim=1] cluster_labels = inverse.astype(np.int32)
+
+    # Calculate cluster centers (mean of points in each cluster)
+    cdef np.ndarray[np.float64_t, ndim=2] cluster_centers = np.zeros((len(unique_roots), D), dtype=np.float64)
+    cdef np.ndarray[np.int32_t, ndim=1] cluster_counts = np.zeros(len(unique_roots), dtype=np.int32)
+
+    # Sum up points in each cluster
+    for i in range(N):
+        cluster_id = cluster_labels[i]
+        for d in range(D):
+            cluster_centers[cluster_id, d] += X[i, d]
+        cluster_counts[cluster_id] += 1
+
+    # Divide by count to get mean
+    for i in range(len(unique_roots)):
+        if cluster_counts[i] > 0:
+            for d in range(D):
+                cluster_centers[i, d] /= cluster_counts[i]
+
+    return cluster_labels, cluster_centers
