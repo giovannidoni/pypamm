@@ -319,7 +319,7 @@ def plot_clusters(
     if title:
         ax.set_title(title)
 
-    if n_dimensions > 2 and use_tsne:
+    if n_dimensions > 2:
         ax.set_xlabel("t-SNE 1")
         ax.set_ylabel("t-SNE 2")
     else:
