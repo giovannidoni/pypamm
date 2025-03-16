@@ -12,7 +12,7 @@ visualization:
 
 datasets: &data
   - dataset_high_noise
-  - dataset_high_dim_non_uniform
+  - dataset_high_dim
 
 # Example-specific configurations
 examples:
