@@ -31,7 +31,7 @@ def quick_shift_clustering(
     - max_dist: Maximum distance threshold
 
     Returns:
-    - idxroot: Cluster assignment for each point
+    - cluster_labels: Cluster assignment for each point
     - cluster_centers: Array of unique cluster centers
     """
     cdef Py_ssize_t N = X.shape[0]
@@ -82,4 +82,21 @@ def quick_shift_clustering(
         if nearest_neighbor[i] != -1:
             idxroot[i] = idxroot[nearest_neighbor[i]]
 
-    return final_labels, unique_roots
+    # Calculate cluster centers (mean of points in each cluster)
+    cdef np.ndarray[np.float64_t, ndim=2] cluster_centers = np.zeros((len(unique_roots), D), dtype=np.float64)
+    cdef np.ndarray[np.int32_t, ndim=1] cluster_counts = np.zeros(len(unique_roots), dtype=np.int32)
+
+    # Sum up points in each cluster
+    for i in range(N):
+        cluster_id = cluster_labels[i]
+        for d in range(D):
+            cluster_centers[cluster_id, d] += X[i, d]
+        cluster_counts[cluster_id] += 1
+
+    # Divide by count to get mean
+    for i in range(len(unique_roots)):
+        if cluster_counts[i] > 0:
+            for d in range(D):
+                cluster_centers[i, d] /= cluster_counts[i]
+
+    return cluster_labels, cluster_centers
