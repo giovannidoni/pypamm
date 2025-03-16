@@ -90,7 +90,7 @@ for i, dataset_name in enumerate(datasets):
 
         # Compute KDE on the grid points
         if bandwidth == "adaptive":
-            density = compute_kde(X, grid_points, constant_bandwidth=bandwidth, adaptive=True)
+            density = compute_kde(X, grid_points, adaptive=True)
         else:
             density = compute_kde(X, grid_points, constant_bandwidth=bandwidth, adaptive=False)
 
