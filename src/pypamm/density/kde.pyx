@@ -10,26 +10,28 @@ from scipy.linalg import eigh, inv
 # -----------------------------------------------------------------------------
 cpdef compute_bandwidth(
     np.ndarray[np.float64_t, ndim=2] X,
+    double alpha=0.5,
     double constant_bandwidth=-1.0,
     double delta=1e-3,
     double tune=0.1,
     int max_iter=50,
     bint use_adaptive=True,
-    double fpoints=None,
-    double gspread=None
+    double fpoints=-1.0,
+    double gspread=-1.0
 ):
     """
     Computes bandwidth estimation with optional adaptivity.
 
     Parameters:
     - X: (N, D) Data points.
+    - alpha: Adaptivity parameter (0.5 by default).
     - constant_bandwidth: If > 0, a fixed bandwidth is used.
     - delta: Convergence threshold.
     - tune: Initial step size for adaptation.
     - max_iter: Maximum iterations for tuning.
     - use_adaptive: Whether to use adaptive bandwidth computation.
-    - fpoints: Fraction of points for bandwidth localization.
-    - gspread: Spread factor for KDE scaling.
+    - fpoints: Fraction of points for bandwidth localization. Set to -1.0 to disable.
+    - gspread: Spread factor for KDE scaling. Set to -1.0 to disable.
 
     Returns:
     - h: Global bandwidth (or fixed value if provided).
@@ -45,23 +47,23 @@ cpdef compute_bandwidth(
         return constant_bandwidth, np.full(N, constant_bandwidth, dtype=np.float64)
 
     # Ensure that only `fpoints` or `gspread` is used (mutual exclusivity)
-    if fpoints is not None and gspread is not None:
+    if fpoints > 0 and gspread > 0:
         raise ValueError("Only one of `fpoints` or `gspread` can be set. Choose one.")
 
     # Default `fpoints` and `gspread` based on availability
-    if fpoints is None and gspread is None:
+    if fpoints <= 0 and gspread <= 0:
         fpoints = 0.05  # Default to 5% of points if neither is set
 
     # Compute initial covariance estimate
     cdef np.ndarray[np.float64_t, ndim=2] Qi = np.cov(X, rowvar=False) + np.eye(D) * 1e-6  # Stability
 
     # **Adaptive Bandwidth Scaling:**
-    if fpoints is not None:
+    if fpoints > 0:
         n_local = fpoints * N  # Fraction-based localization
         Hi = (4.0 / (D + 2.0)) ** (2.0 / (D + 4.0)) * n_local ** (-2.0 / (D + 4.0)) * Qi
     else:
         n_local = N  # Default full dataset
-        Hi = gspread * Qi if gspread is not None else Qi  # Scale by `gspread`
+        Hi = gspread * Qi if gspread > 0 else Qi  # Scale by `gspread`
 
     # Inverse bandwidth matrix
     Hiinv = np.linalg.inv(Hi)
@@ -70,7 +72,7 @@ cpdef compute_bandwidth(
     cdef np.ndarray[np.float64_t, ndim=1] sigma2 = np.full(N, np.mean(np.diag(Qi)), dtype=np.float64)
 
     # **Apply Adaptive Bandwidth Refinement (if enabled)**
-    if use_adaptive and fpoints is not None:
+    if use_adaptive and fpoints > 0:
         for i in range(N):
             iter_count = 0
             prev_sigma2 = sigma2[i]
@@ -103,7 +105,7 @@ cpdef compute_bandwidth(
             sigma2[i] = max(sigma2[i], np.min(np.linalg.norm(X - X[i], axis=1)) + 1e-6)
 
     # If `gspread` is used, scale bandwidth accordingly
-    if gspread is not None:
+    if gspread > 0:
         sigma2 *= gspread
 
     # Compute final bandwidth values
@@ -119,7 +121,9 @@ cpdef gauss_prepare(
     np.ndarray[np.float64_t, ndim=2] X,
     double alpha=0.5,
     bint adaptive=False,
-    double constant_bandwidth=-1.0
+    double constant_bandwidth=-1.0,
+    double fpoints=-1.0,
+    double gspread=-1.0
 ):
     """
     Computes mean, covariance, and adaptive bandwidth matrix.
@@ -129,6 +133,8 @@ cpdef gauss_prepare(
     - alpha: Adaptivity parameter for bandwidth.
     - adaptive: Whether to use adaptive bandwidth.
     - constant_bandwidth: If > 0, uses a fixed bandwidth instead.
+    - fpoints: Fraction of points for bandwidth localization. Set to -1.0 to disable.
+    - gspread: Spread factor for KDE scaling. Set to -1.0 to disable.
 
     Returns:
     - mean: (D,) Mean vector.
@@ -168,7 +174,7 @@ cpdef gauss_prepare(
     cdef np.ndarray[np.float64_t, ndim=1] adaptive_bandwidths
 
     if adaptive:
-        h, adaptive_bandwidths = compute_bandwidth(X, alpha=alpha, constant_bandwidth=constant_bandwidth)
+        h, adaptive_bandwidths = compute_bandwidth(X, alpha=alpha, constant_bandwidth=constant_bandwidth, use_adaptive=True, fpoints=fpoints, gspread=gspread)
     else:
         h = constant_bandwidth if constant_bandwidth > 0 else 1.0  # Use fixed bandwidth
 
@@ -189,8 +195,8 @@ cpdef compute_kde(
     double alpha=0.5,
     bint adaptive=False,
     double constant_bandwidth=-1.0,
-    object fpoints=None,
-    object gspread=None
+    double fpoints=-1.0,
+    double gspread=-1.0
 ):
     """
     Computes Kernel Density Estimation (KDE) with optional adaptive bandwidth.
@@ -198,11 +204,11 @@ cpdef compute_kde(
     Parameters:
     - X: (N, D) Data points.
     - grid: (G, D) Grid points where KDE is evaluated.
-    - alpha: Adaptivity parameter.
+    - alpha: Adaptivity parameter for bandwidth.
     - adaptive: Whether to use adaptive bandwidth.
     - constant_bandwidth: If > 0, use a fixed bandwidth instead of adaptive estimation.
-    - fpoints: Fraction of points for bandwidth localization.
-    - gspread: Spread factor for KDE scaling.
+    - fpoints: Fraction of points for bandwidth localization. Set to -1.0 to disable.
+    - gspread: Spread factor for KDE scaling. Set to -1.0 to disable.
 
     Returns:
     - density: (G,) KDE density values at each grid point.
@@ -264,7 +270,9 @@ cpdef kde_bootstrap_error(
     int n_bootstrap,
     double alpha=0.5,
     bint adaptive=False,
-    double constant_bandwidth=-1.0
+    double constant_bandwidth=-1.0,
+    double fpoints=-1.0,
+    double gspread=-1.0
 ):
     """
     Estimates KDE statistical error using bootstrap resampling.
@@ -275,6 +283,8 @@ cpdef kde_bootstrap_error(
     - alpha: Adaptivity parameter for bandwidth.
     - adaptive: Whether to use adaptive bandwidth.
     - constant_bandwidth: If > 0, uses a fixed bandwidth instead.
+    - fpoints: Fraction of points for bandwidth localization. Set to -1.0 to disable.
+    - gspread: Spread factor for KDE scaling. Set to -1.0 to disable.
 
     Returns:
     - mean_kde: Mean KDE values.
@@ -289,7 +299,9 @@ cpdef kde_bootstrap_error(
     cdef int b, i
     for b in range(n_bootstrap):
         boot_sample = X[np.random.choice(N, N, replace=True)]
-        boot_kdes[b] = compute_kde(boot_sample, grid, alpha, adaptive, constant_bandwidth)
+        boot_kdes[b] = compute_kde(boot_sample, grid, alpha=alpha, adaptive=adaptive,
+                                  constant_bandwidth=constant_bandwidth,
+                                  fpoints=fpoints, gspread=gspread)
 
     cdef np.ndarray[np.float64_t, ndim=1] mean_kde = np.mean(boot_kdes, axis=0)
     cdef np.ndarray[np.float64_t, ndim=1] std_kde = np.std(boot_kdes, axis=0)
