@@ -25,7 +25,7 @@ def generate_dataset(config_section: str) -> tuple:
     Parameters:
     -----------
     config_section : str
-        Identifier for the section in config.yaml containing dataset parameters.
+        Identifier for the section in data_config.yaml containing dataset parameters.
         The section should include:
         - n_clusters: int, number of clusters to generate
         - n_dimensions: int, dimensionality of the data
@@ -43,13 +43,13 @@ def generate_dataset(config_section: str) -> tuple:
         Generated dataset with shape (n_samples, n_dimensions), normalized to [0,1] range
     """
     # Load configuration from YAML file
-    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    config_path = os.path.join(os.path.dirname(__file__), "data_config.yaml")
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
     # Get dataset parameters from the specified section
     if config_section not in config:
-        raise ValueError(f"Section '{config_section}' not found in config.yaml")
+        raise ValueError(f"Section '{config_section}' not found in data_config.yaml")
 
     dataset_config = config[config_section]
 

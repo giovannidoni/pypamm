@@ -1,141 +1,153 @@
 #!/usr/bin/env python
 """
-Quick Shift Clustering Example
+Quick-Shift Clustering Example
 
-This example demonstrates how to use the quick_shift function
-from pypamm to perform mode-seeking clustering on a dataset.
+This example demonstrates how to use the Quick-Shift clustering algorithm
+from the PyPAMM library and compares it with hierarchical clustering.
+Quick-Shift is a mode-seeking algorithm that finds clusters by shifting
+points towards higher density regions.
 
-Quick Shift is useful for:
-- Finding clusters without specifying the number of clusters in advance
-- Identifying clusters of arbitrary shape
-- Handling noise and outliers
-- Finding modes in the data distribution
-
-Note: For large datasets, consider using the graph-based implementation
-demonstrated in quick_shift_graph_example.py
+The example uses datasets defined in the example_config.yaml file and visualizes
+the clustering results side by side for comparison.
 """
+
+import os
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import gaussian_kde
+import yaml
+from data_generator import generate_dataset
+from sklearn.cluster import AgglomerativeClustering
 
-from pypamm import quick_shift
+from pypamm.density.kde import compute_kde
+from pypamm.quick_shift import quick_shift_clustering
 
-# Set random seed for reproducibility
-np.random.seed(42)
+# Load configuration from YAML file
+config_path = os.path.join(os.path.dirname(__file__), "example_config.yaml")
+with open(config_path) as f:
+    config = yaml.safe_load(f)
 
+# Get visualization settings
+viz_config = config["visualization"]
+output_dir = viz_config["output_dir"]
+os.makedirs(output_dir, exist_ok=True)
 
-# Generate a synthetic dataset with multiple clusters
-def generate_multi_cluster_data(n_samples=500):
-    """Generate synthetic data with multiple clusters of different shapes."""
-    # Cluster 1: Gaussian cluster
-    cluster1 = np.random.randn(n_samples // 3, 2) * 0.5 + np.array([2, 2])
+# Get example-specific configuration
+example_config = config["examples"]["quick_shift_example"]
+datasets = example_config["datasets"]
 
-    # Cluster 2: Elongated cluster
-    x2 = np.random.randn(n_samples // 3, 1) * 1.5
-    y2 = np.random.randn(n_samples // 3, 1) * 0.3
-    cluster2 = np.hstack([x2 + 6, y2 + 5])
+# Get algorithm parameters
+kde_config = config["algorithms"]["kde"]
+qs_config = config["algorithms"]["quick_shift"]
+hc_config = config["algorithms"]["hierarchical"]
 
-    # Cluster 3: Ring-shaped cluster
-    theta = np.random.uniform(0, 2 * np.pi, n_samples // 3)
-    r = np.random.normal(2, 0.2, n_samples // 3)
-    x3 = r * np.cos(theta) + 8
-    y3 = r * np.sin(theta) + 1
-    cluster3 = np.vstack([x3, y3]).T
+# Process each dataset
+for dataset_name in datasets:
+    print(f"\n{'=' * 80}")
+    print(f"Processing dataset: {dataset_name}")
+    print(f"{'=' * 80}")
 
-    # Combine all clusters
-    X = np.vstack([cluster1, cluster2, cluster3])
+    # Generate dataset
+    dataset_config = config["datasets"][dataset_name]
+    X = generate_dataset(dataset_name)
 
-    return X
+    # 1. Hierarchical Clustering
+    print("\nApplying Hierarchical Clustering...")
+    # Get number of clusters from the dataset config
+    n_clusters = dataset_config["n_clusters"]
+    linkage = hc_config["linkage"]
 
+    # Apply hierarchical clustering
+    start_time = time.time()
+    hierarchical = AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage)
+    hierarchical_labels = hierarchical.fit_predict(X)
+    hierarchical_time = time.time() - start_time
+    print(f"Hierarchical clustering completed in {hierarchical_time:.4f} seconds")
 
-# Generate data
-X = generate_multi_cluster_data(n_samples=600)
-print(f"Generated dataset with {X.shape[0]} points in {X.shape[1]}D space")
+    # 2. Quick-Shift clustering
+    print("\nApplying Quick-Shift clustering...")
+    # Compute KDE for density estimation
+    bandwidth = kde_config["bandwidth"]
+    start_time = time.time()
+    density = compute_kde(X, X, bandwidth)
+    kde_time = time.time() - start_time
+    print(f"KDE computation time: {kde_time:.4f} seconds")
 
-# Estimate density using KDE
-kde = gaussian_kde(X.T)
-prob = kde(X.T)
-prob = prob / np.max(prob)  # Normalize to [0, 1]
+    # Apply Quick-Shift clustering
+    lambda_qs = qs_config["lambda_qs"]
+    max_dist = qs_config["max_dist"]
+    ngrid = qs_config["ngrid"]
+    metric = qs_config["metric"]
 
-# Create a figure for visualization
-plt.figure(figsize=(15, 10))
+    start_time = time.time()
+    qs_labels, qs_centers = quick_shift_clustering(
+        X, density, ngrid=ngrid, metric=metric, lambda_qs=lambda_qs, max_dist=max_dist
+    )
+    qs_time = time.time() - start_time
+    n_qs_clusters = len(np.unique(qs_labels))
+    print(f"Quick-Shift found {n_qs_clusters} clusters in {qs_time:.4f} seconds")
 
-# Plot the original data with density
-plt.subplot(2, 2, 1)
-plt.scatter(X[:, 0], X[:, 1], c=prob, cmap="viridis", s=30)
-plt.colorbar(label="Normalized Density")
-plt.title("Original Data with Density Estimation")
-plt.xlabel("X")
-plt.ylabel("Y")
+    # Create a side-by-side comparison figure
+    figsize = tuple(viz_config["figsize"])
+    fig, axes = plt.subplots(1, 2, figsize=figsize)
 
-# Try different lambda values for Quick Shift
-lambda_values = [0.5, 1.0, 2.0]
-max_dist = 3.0  # Maximum distance threshold
+    # Plot hierarchical clustering
+    scatter1 = axes[0].scatter(
+        X[:, 0],
+        X[:, 1],
+        c=hierarchical_labels,
+        cmap=viz_config["cmap"],
+        alpha=viz_config["alpha"],
+        s=viz_config["point_size"],
+        edgecolors="w",
+        linewidths=0.5,
+    )
+    axes[0].set_title(f"Hierarchical Clustering\n{n_clusters} clusters, linkage={linkage}\n{hierarchical_time:.4f}s")
+    axes[0].set_xlabel("Feature 1")
+    axes[0].set_ylabel("Feature 2")
+    axes[0].grid(True, alpha=0.3)
 
-for i, lambda_qs in enumerate(lambda_values):
-    # Run Quick Shift clustering
-    cluster_labels = quick_shift(X, prob=prob, ngrid=50, lambda_qs=lambda_qs, max_dist=max_dist)
+    # Plot Quick-Shift clustering
+    scatter2 = axes[1].scatter(
+        X[:, 0],
+        X[:, 1],
+        c=qs_labels,
+        cmap=viz_config["cmap"],
+        alpha=viz_config["alpha"],
+        s=viz_config["point_size"],
+        edgecolors="w",
+        linewidths=0.5,
+    )
 
-    # Plot the results
-    plt.subplot(2, 2, i + 2)
+    axes[1].set_title(
+        f"Quick-Shift Clustering\n{n_qs_clusters} clusters, λ={lambda_qs}, max_dist={max_dist}\n{qs_time:.4f}s"
+    )
+    axes[1].set_xlabel("Feature 1")
+    axes[1].set_ylabel("Feature 2")
+    axes[1].grid(True, alpha=0.3)
 
-    # Plot points colored by cluster
-    unique_labels = np.unique(cluster_labels)
-    colors = plt.cm.tab10(np.linspace(0, 1, len(unique_labels)))
+    # Add overall title
+    plt.suptitle(f"Clustering Comparison on {dataset_name}\n{dataset_config['description']}", fontsize=16)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.85)
 
-    for j, label in enumerate(unique_labels):
-        mask = cluster_labels == label
-        plt.scatter(X[mask, 0], X[mask, 1], color=colors[j % 10], s=30, alpha=0.7, label=f"Cluster {j + 1}")
+    # Save figure
+    output_path = f"{output_dir}/comparison_{dataset_name}.png"
+    plt.savefig(output_path, dpi=viz_config["dpi"], bbox_inches="tight")
+    print(f"Comparison figure saved to {output_path}")
+    plt.close(fig)
 
-    plt.title(f"Quick Shift Clustering\n(lambda={lambda_qs}, {len(unique_labels)} clusters)")
-    plt.xlabel("X")
-    plt.ylabel("Y")
+    # Print comparison summary
+    print("\nClustering Comparison Summary:")
+    print("=" * 50)
+    print(f"Dataset: {dataset_name}")
+    print(f"Description: {dataset_config['description']}")
+    print(f"True number of clusters: {dataset_config['n_clusters']}")
+    print("-" * 50)
+    print(f"Hierarchical: {n_clusters} clusters in {hierarchical_time:.4f}s (linkage={linkage})")
+    print(f"Quick-Shift: {n_qs_clusters} clusters in {qs_time:.4f}s (+ {kde_time:.4f}s for KDE)")
+    print("=" * 50)
 
-    # Print some statistics
-    print(f"\nQuick Shift with lambda={lambda_qs}:")
-    print(f"  - Number of clusters: {len(unique_labels)}")
-
-    # Count points in each cluster
-    for j, label in enumerate(unique_labels):
-        count = np.sum(cluster_labels == label)
-        print(f"  - Cluster {j + 1}: {count} points")
-
-plt.tight_layout()
-plt.savefig("quick_shift_example.png")
-print("Figure saved as 'quick_shift_example.png'")
-
-# Print explanation of the Quick Shift algorithm
-print("\nExplanation of Quick Shift Clustering:")
-print("------------------------------------")
-print("Quick Shift is a mode-seeking clustering algorithm that:")
-print("1. Estimates the density of the data points")
-print("2. Shifts each point towards the nearest neighbor with higher density")
-print("3. Forms clusters by connecting points that shift to the same mode")
-
-print("\nKey Parameters:")
-print("- lambda_qs: Controls the tradeoff between density and distance")
-print("  - Smaller values prioritize density (more clusters)")
-print("  - Larger values prioritize distance (fewer clusters)")
-print("- max_dist: Maximum distance threshold for connecting points")
-print("  - Limits the maximum shift distance")
-print("  - Helps prevent connecting distant clusters")
-print("- ngrid: Number of grid points for density estimation")
-print("  - Higher values provide more accurate density estimation")
-print("- neighbor_graph: Optional pre-computed neighbor graph")
-print("  - Significantly improves performance for large datasets")
-print("  - See quick_shift_graph_example.py for details")
-
-print("\nAdvantages of Quick Shift:")
-print("- Automatically determines the number of clusters")
-print("- Can find clusters of arbitrary shape")
-print("- Robust to noise and outliers")
-print("- Based on density estimation, which is intuitive")
-print("- Efficient implementation for large datasets (with neighbor_graph)")
-
-print("\nLimitations:")
-print("- Sensitive to parameter settings")
-print("- Requires density estimation, which can be computationally expensive")
-print("- May struggle with clusters of varying densities")
-
-print("\nExample completed successfully!")
+print("\nQuick-Shift example completed successfully!")
+print(f"All visualizations saved to {output_dir}/")
