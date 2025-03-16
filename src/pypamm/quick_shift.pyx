@@ -50,6 +50,10 @@ def quick_shift_clustering(
     cdef np.ndarray[np.float64_t, ndim=2] dummy_param = np.zeros((1, 1), dtype=np.float64)
     cdef double dist_val
 
+    # Create memoryviews for the distance function
+    cdef double[::1] point_i, point_j
+    cdef double[:, ::1] param_view = dummy_param
+
     # Sort points by density (higher density first)
     cdef np.ndarray[np.int64_t, ndim=1] sorted_indices = np.argsort(-prob)
 
@@ -58,10 +62,12 @@ def quick_shift_clustering(
         # Use neighbor graph for efficiency
         for idx in range(N):
             i = sorted_indices[idx]
+            point_i = X[i]
             for j in neighbor_graph.indices[neighbor_graph.indptr[i]:neighbor_graph.indptr[i + 1]]:
                 # Only consider neighbors with higher density (scaled by lambda_qs)
                 if prob[j] > prob[i] * lambda_qs:
-                    dist_val = dist_func(&X[i, 0], &X[j, 0], &dummy_param[0, 0])
+                    point_j = X[j]
+                    dist_val = dist_func(point_i, point_j, param_view)
                     if dist_val < min_dist[i] and dist_val <= max_dist:
                         min_dist[i] = dist_val
                         nearest_higher_density[i] = j
@@ -69,12 +75,14 @@ def quick_shift_clustering(
         # Brute-force approach for all pairs
         for idx in range(N):
             i = sorted_indices[idx]
+            point_i = X[i]
             for j in range(N):
                 if i == j:
                     continue  # Skip self
                 # Only consider points with higher density (scaled by lambda_qs)
                 if prob[j] > prob[i] * lambda_qs:
-                    dist_val = dist_func(&X[i, 0], &X[j, 0], &dummy_param[0, 0])
+                    point_j = X[j]
+                    dist_val = dist_func(point_i, point_j, param_view)
                     if dist_val < min_dist[i] and dist_val <= max_dist:
                         min_dist[i] = dist_val
                         nearest_higher_density[i] = j
