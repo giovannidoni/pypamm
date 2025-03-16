@@ -21,6 +21,7 @@ from pypamm import select_grid_points
 np.random.seed(42)
 
 
+# use data_generator.py to generate a synthetic dataset
 # Generate a synthetic dataset: 1000 points in 2D with clusters
 def generate_clustered_data(n_samples=1000, n_clusters=5):
     """Generate synthetic clustered data."""

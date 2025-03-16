@@ -2,268 +2,354 @@
 """
 Data Generator for PyPAMM Examples
 
-This module provides functions to generate synthetic datasets for
-demonstrating PyPAMM algorithms. It supports various dataset types
-including clusters, rings, lines, and noise.
+This module provides a focused tool to generate synthetic datasets for
+clustering algorithms. It reads parameters from a config.yaml file and
+generates datasets with specified number of clusters, shape, dimensionality,
+and noise level, all normalized to the [0,1] range.
 """
 
 import os
+import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import yaml
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import MinMaxScaler
 
 
-def generate_dataset(config: dict | str) -> np.ndarray:
+def generate_dataset(config_section: str) -> tuple:
     """
-    Generate a synthetic dataset based on configuration parameters.
+    Generate a synthetic dataset for clustering based on parameters from a config section.
 
     Parameters:
     -----------
-    config : dict or str
-        Either a dictionary with configuration parameters or a path to a YAML config file.
-        The configuration should specify dataset parameters including:
-        - random_seed: int, seed for reproducibility
-        - components: list of component configurations, each with:
-          - type: str, type of component ('cluster', 'ring', 'line', 'noise', 'grid')
-          - n_points: int, number of points in this component
-          - center: list, center coordinates
-          - scale: float or list, scale/spread of the component
-          - additional component-specific parameters
+    config_section : str
+        Identifier for the section in config.yaml containing dataset parameters.
+        The section should include:
+        - n_clusters: int, number of clusters to generate
+        - n_dimensions: int, dimensionality of the data
+        - cluster_std: float, standard deviation of clusters (shape parameter)
+        - cluster_uniformity: float, controls how uniform the clusters are (0.0 to 1.0)
+          where 1.0 means perfectly spherical clusters and lower values create more elongated clusters
+        - population_uniformity: float, controls how uniform the cluster populations are (0.0 to 1.0)
+          where 1.0 means all clusters have equal size and 0.0 means one large cluster and the rest are small
+        - noise_level: float, fraction of points that are noise (0.0 to 1.0)
+        - n_samples: int, total number of data points to generate
 
     Returns:
     --------
     X : np.ndarray
-        Generated dataset with shape (n_points, n_dimensions)
+        Generated dataset with shape (n_samples, n_dimensions), normalized to [0,1] range
     """
-    # Load config from file if a string is provided
-    if isinstance(config, str):
-        with open(config) as f:
-            config = yaml.safe_load(f)
+    # Load configuration from YAML file
+    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    # Get dataset parameters from the specified section
+    if config_section not in config:
+        raise ValueError(f"Section '{config_section}' not found in config.yaml")
+
+    dataset_config = config[config_section]
+
+    # Extract parameters with defaults
+    n_clusters = dataset_config.get("n_clusters", 4)
+    n_dimensions = dataset_config.get("n_dimensions", 2)
+    cluster_std = dataset_config.get("cluster_std", 0.1)
+    cluster_uniformity = dataset_config.get("cluster_uniformity", 1.0)
+    population_uniformity = dataset_config.get("population_uniformity", 1.0)
+    noise_level = dataset_config.get("noise_level", 0.1)
+    n_samples = dataset_config.get("n_samples", 1000)
+    random_seed = dataset_config.get("random_seed", 42)
 
     # Set random seed for reproducibility
-    if "random_seed" in config:
-        np.random.seed(config["random_seed"])
+    np.random.seed(random_seed)
 
-    # Initialize empty dataset
-    data_components = []
+    # Calculate number of clustered points and noise points
+    n_clustered = int(n_samples * (1 - noise_level))
+    n_noise = n_samples - n_clustered
 
-    # Generate each component
-    for component in config["components"]:
-        component_type = component["type"]
-        n_points = component["n_points"]
+    # Calculate points per cluster based on population_uniformity
+    if population_uniformity >= 1.0:
+        # Perfectly uniform cluster sizes
+        samples_per_cluster = [
+            n_clustered // n_clusters + (1 if i < n_clustered % n_clusters else 0) for i in range(n_clusters)
+        ]
+    else:
+        # Non-uniform cluster sizes
+        # Create a power distribution where lower uniformity means more skewed sizes
+        # At uniformity=0, one cluster gets most points, others get minimum
+        min_points_per_cluster = max(5, int(n_clustered * 0.01))  # Ensure at least a few points per cluster
+        remaining_points = n_clustered - min_points_per_cluster * n_clusters
 
-        if component_type == "cluster":
-            # Gaussian cluster
-            center = np.array(component["center"])
-            if isinstance(component["scale"], list):
-                scale = np.array(component["scale"])
-            else:
-                scale = component["scale"]
-
-            if "dimensions" in component:
-                dims = component["dimensions"]
-            else:
-                dims = len(center)
-
-            if isinstance(scale, np.ndarray):
-                points = np.random.randn(n_points, dims) * scale[:, np.newaxis].T + center
-            else:
-                points = np.random.randn(n_points, dims) * scale + center
-
-        elif component_type == "ring":
-            # Ring-shaped cluster
-            center = np.array(component["center"])
-            radius = component["radius"]
-            thickness = component.get("thickness", 0.1)
-
-            theta = np.random.uniform(0, 2 * np.pi, n_points)
-            r = np.random.normal(radius, thickness, n_points)
-
-            x = r * np.cos(theta) + center[0]
-            y = r * np.sin(theta) + center[1]
-
-            points = np.vstack([x, y]).T
-
-        elif component_type == "line":
-            # Line-shaped cluster
-            start = np.array(component["start"])
-            end = np.array(component["end"])
-            thickness = component.get("thickness", 0.1)
-
-            # Generate points along the line
-            t = np.random.rand(n_points, 1)
-            line_points = start + t * (end - start)
-
-            # Add perpendicular noise
-            direction = end - start
-            perpendicular = np.array([-direction[1], direction[0]])
-            perpendicular = perpendicular / np.linalg.norm(perpendicular)
-
-            noise = np.random.randn(n_points, 1) * thickness
-            points = line_points + noise * perpendicular
-
-        elif component_type == "grid":
-            # Grid of clusters
-            grid_size = component["grid_size"]
-            min_coords = component.get("min_coords", [0, 0])
-            max_coords = component.get("max_coords", [10, 10])
-            cluster_scale = component.get("cluster_scale", 0.1)
-
-            # Calculate the number of points per grid cell
-            points_per_cell = n_points // (grid_size[0] * grid_size[1])
-            if points_per_cell < 1:
-                points_per_cell = 1
-
-            # Generate grid centers
-            x_centers = np.linspace(min_coords[0], max_coords[0], grid_size[0])
-            y_centers = np.linspace(min_coords[1], max_coords[1], grid_size[1])
-
-            # Generate points for each grid cell
-            grid_points = []
-            for x in x_centers:
-                for y in y_centers:
-                    # Create a small cluster at each grid point
-                    cluster = np.random.randn(points_per_cell, 2) * cluster_scale + np.array([x, y])
-                    grid_points.append(cluster)
-
-            points = np.vstack(grid_points)
-
-        elif component_type == "noise":
-            # Uniform noise
-            min_val = component.get("min", 0)
-            max_val = component.get("max", 10)
-            dims = component.get("dimensions", 2)
-
-            points = np.random.uniform(min_val, max_val, (n_points, dims))
-
+        if population_uniformity <= 0.0:
+            # One dominant cluster, others minimal
+            samples_per_cluster = [min_points_per_cluster] * n_clusters
+            samples_per_cluster[0] += remaining_points
         else:
-            raise ValueError(f"Unknown component type: {component_type}")
+            # Create a power law distribution
+            # Higher exponent = more uniform (closer to 1.0)
+            exponent = 1.0 / (1.0 - population_uniformity) if population_uniformity < 1.0 else 1.0
+            weights = np.array([(1.0 / (i + 1)) ** exponent for i in range(n_clusters)])
+            weights = weights / weights.sum()
 
-        data_components.append(points)
+            # Distribute remaining points according to weights
+            extra_points = np.round(weights * remaining_points).astype(int)
+            # Adjust for rounding errors
+            if extra_points.sum() != remaining_points:
+                diff = remaining_points - extra_points.sum()
+                extra_points[0] += diff
 
-    # Combine all components
-    X = np.vstack(data_components)
+            samples_per_cluster = [min_points_per_cluster + extra for extra in extra_points]
 
-    # Shuffle the data if requested
-    if config.get("shuffle", True):
-        np.random.shuffle(X)
+    # Generate cluster centers
+    centers = np.random.rand(n_clusters, n_dimensions)
+
+    # Generate clustered data with varying uniformity
+    X_clustered = []
+    labels = []
+
+    for i in range(n_clusters):
+        # Get number of points for this cluster
+        n_points = samples_per_cluster[i]
+
+        # Create a random covariance matrix based on uniformity
+        if cluster_uniformity >= 1.0:
+            # Perfectly spherical clusters
+            cov = np.eye(n_dimensions) * (cluster_std**2)
+        else:
+            # Create a random covariance matrix with controlled elongation
+            # Start with a diagonal matrix
+            eigenvalues = np.ones(n_dimensions)
+
+            # Modify eigenvalues to create elongation
+            # The lower the uniformity, the more variation in eigenvalues
+            if n_dimensions > 1:
+                variation = (1.0 - cluster_uniformity) * 5.0  # Scale factor for variation
+                eigenvalues = np.random.uniform(1.0 - variation, 1.0 + variation, n_dimensions)
+                eigenvalues = np.abs(eigenvalues)  # Ensure positive eigenvalues
+
+            # Create a random rotation matrix
+            Q = np.random.randn(n_dimensions, n_dimensions)
+            Q, _ = np.linalg.qr(Q)  # Orthogonalize
+
+            # Create covariance matrix: Q * diag(eigenvalues) * Q^T
+            cov = Q @ np.diag(eigenvalues) @ Q.T
+            cov = cov * (cluster_std**2)  # Scale by cluster_std
+
+        # Generate points from multivariate normal distribution
+        cluster_points = np.random.multivariate_normal(mean=centers[i], cov=cov, size=n_points)
+
+        X_clustered.append(cluster_points)
+        labels.extend([i] * n_points)
+
+    X_clustered = np.vstack(X_clustered)
+
+    # Generate noise data (uniform distribution)
+    X_min = X_clustered.min(axis=0)
+    X_max = X_clustered.max(axis=0)
+    X_noise = np.random.uniform(low=X_min, high=X_max, size=(n_noise, n_dimensions))
+
+    # Combine clustered data and noise
+    X = np.vstack([X_clustered, X_noise])
+
+    # Shuffle the data
+    indices = np.arange(n_samples)
+    np.random.shuffle(indices)
+    X = X[indices]
+
+    # Print dataset information
+    print(f"Generated dataset from '{config_section}' section:")
+    print(f"  {n_samples} points in {n_dimensions}D space")
+    print(f"  {n_clusters} clusters with std={cluster_std}, uniformity={cluster_uniformity}")
+
+    # Print cluster population information
+    if population_uniformity < 1.0:
+        print(f"  Non-uniform cluster populations (uniformity={population_uniformity}):")
+        for i, size in enumerate(samples_per_cluster):
+            print(f"    Cluster {i}: {size} points ({size / n_clustered * 100:.1f}%)")
+    else:
+        print(f"  Uniform cluster populations: ~{n_clustered // n_clusters} points per cluster")
+
+    print(f"  {noise_level * 100:.1f}% noise")
+    print("  All values normalized to [0,1] range")
 
     return X
 
 
-def load_config(name: str) -> dict:
+def list_dataset_sections():
     """
-    Load a predefined configuration by name.
-
-    Parameters:
-    -----------
-    name : str
-        Name of the predefined configuration
+    List all available dataset sections in the config.yaml file.
 
     Returns:
     --------
-    config : dict
-        Configuration dictionary
+    sections : list
+        List of section names that can be used for dataset generation
     """
-    # Check if it's a path to a YAML file
-    if os.path.exists(name) and (name.endswith(".yaml") or name.endswith(".yml")):
-        with open(name) as f:
-            return yaml.safe_load(f)
+    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
 
-    # Check if it's a predefined configuration name
-    config_dir = os.path.join(os.path.dirname(__file__), "configs")
-
-    # Try with .yaml extension
-    config_path = os.path.join(config_dir, f"{name}.yaml")
-    if os.path.exists(config_path):
-        with open(config_path) as f:
-            return yaml.safe_load(f)
-
-    # Try with .yml extension
-    config_path = os.path.join(config_dir, f"{name}.yml")
-    if os.path.exists(config_path):
-        with open(config_path) as f:
-            return yaml.safe_load(f)
-
-    raise ValueError(f"Configuration '{name}' not found")
+    # Filter sections that have dataset parameters
+    for section, params in config.items():
+        if isinstance(params, dict) and "n_clusters" in params:
+            yield section, params
 
 
-def save_config(config: dict, path: str) -> None:
+def plot_clusters(
+    X,
+    labels=None,
+    use_tsne=False,
+    title=None,
+    output_path=None,
+    figsize=(12, 10),
+    cmap="viridis",
+    alpha=0.8,
+    point_size=30,
+    random_seed=42,
+):
     """
-    Save a configuration to a YAML file.
+    Plot clusters with optional t-SNE dimensionality reduction.
 
     Parameters:
     -----------
-    config : dict
-        Configuration dictionary
-    path : str
-        Path to save the configuration
-    """
-    with open(path, "w") as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-
-
-def list_available_configs() -> list[str]:
-    """
-    List all available predefined configurations.
+    X : np.ndarray
+        Dataset to visualize, can be any dimensionality
+    labels : np.ndarray, optional
+        Cluster labels for coloring points
+    use_tsne : bool, default=False
+        Whether to use t-SNE for dimensionality reduction if X has more than 2 dimensions
+    title : str, optional
+        Title for the plot
+    output_path : str, optional
+        Path to save the figure
+    figsize : tuple, default=(12, 10)
+        Figure size
+    cmap : str, default="viridis"
+        Colormap for cluster labels
+    alpha : float, default=0.8
+        Transparency of points
+    point_size : int, default=30
+        Size of points
+    random_seed : int, default=42
+        Random seed for reproducibility
 
     Returns:
     --------
-    config_names : list
-        List of available configuration names
+    fig : matplotlib.figure.Figure
+        The figure object
     """
-    config_dir = os.path.join(os.path.dirname(__file__), "configs")
-    if not os.path.exists(config_dir):
-        return []
+    # Check dimensionality
+    n_dimensions = X.shape[1]
 
-    config_files = [f for f in os.listdir(config_dir) if f.endswith(".yaml") or f.endswith(".yml")]
-    config_names = [os.path.splitext(f)[0] for f in config_files]
-    return sorted(config_names)
+    # Apply t-SNE if needed
+    if n_dimensions > 2 and use_tsne:
+        print(f"Applying t-SNE to reduce {n_dimensions}D data to 2D for visualization...")
+
+        # Then apply t-SNE for final 2D visualization
+        start_time = time.time()
+        tsne = TSNE(n_components=2, random_state=random_seed)
+        X_2d = tsne.fit_transform(X)
+        end_time = time.time()
+        print(f"  t-SNE reduced to 2D in {end_time - start_time:.2f}s")
+
+        # Normalize t-SNE representation to [0,1] range
+        X_2d = MinMaxScaler().fit_transform(X_2d)
+    elif n_dimensions == 2:
+        # Already 2D, no need for reduction
+        X_2d = X
+    else:
+        # More than 2D but t-SNE not requested
+        print(f"Warning: Data has {n_dimensions} dimensions but t-SNE reduction not requested.")
+        print("Only the first 2 dimensions will be plotted.")
+        X_2d = X[:, :2]
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot the data
+    if labels is not None:
+        scatter = ax.scatter(
+            X_2d[:, 0], X_2d[:, 1], c=labels, cmap=cmap, alpha=alpha, s=point_size, edgecolors="w", linewidths=0.5
+        )
+
+        # Add legend for cluster labels
+        legend = ax.legend(*scatter.legend_elements(), loc="upper right", title="Clusters")
+        ax.add_artist(legend)
+
+        # Add colorbar
+        cbar = plt.colorbar(scatter, ax=ax)
+        cbar.set_label("Cluster")
+    else:
+        ax.scatter(X_2d[:, 0], X_2d[:, 1], alpha=alpha, s=point_size, edgecolors="w", linewidths=0.5)
+
+    # Set title and labels
+    if title:
+        ax.set_title(title)
+
+    if n_dimensions > 2 and use_tsne:
+        ax.set_xlabel("t-SNE 1")
+        ax.set_ylabel("t-SNE 2")
+    else:
+        ax.set_xlabel("Feature 1")
+        ax.set_ylabel("Feature 2")
+
+    # Add grid
+    ax.grid(True, alpha=0.3)
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save figure if output path provided
+    if output_path:
+        output_dir = os.path.dirname(output_path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(output_path, dpi=300, bbox_inches="tight")
+        print(f"Figure saved to {output_path}")
+
+    return fig
 
 
 # Example usage
 if __name__ == "__main__":
-    # List available configurations
-    configs = list_available_configs()
-    if configs:
-        print("Available configurations:")
-        for config_name in configs:
-            config = load_config(config_name)
-            print(f"  - {config_name}: {config.get('description', 'No description')}")
+    # Create output directory
+    output_dir = "docs/images"
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Example configuration
-    example_config = {
-        "random_seed": 42,
-        "shuffle": True,
-        "components": [
-            {"type": "cluster", "n_points": 200, "center": [2, 2], "scale": 0.5},
-            {"type": "ring", "n_points": 150, "center": [6, 6], "radius": 2, "thickness": 0.2},
-            {"type": "line", "n_points": 100, "start": [0, 0], "end": [5, 5], "thickness": 0.3},
-            {"type": "noise", "n_points": 50, "min": 0, "max": 10, "dimensions": 2},
-        ],
-        "description": "Example dataset with multiple component types",
-    }
+    for section, config in list_dataset_sections():
+        # Generate dataset
+        X = generate_dataset(section)
+        dimension = config["n_dimensions"]
 
-    # Save example config to YAML file
-    example_config_path = os.path.join(os.path.dirname(__file__), "configs", "example.yaml")
-    save_config(example_config, example_config_path)
-    print(f"Saved example configuration to {example_config_path}")
+        # Create a more descriptive title with configuration details
+        title_parts = []
+        title_parts.append(f"{section}")
+        title_parts.append(f"{dimension}D data")
 
-    # Generate and visualize the dataset
-    X = generate_dataset(example_config)
-    print(f"Generated dataset with {X.shape[0]} points in {X.shape[1]}D space")
+        if "cluster_uniformity" in config:
+            cu = config["cluster_uniformity"]
+            title_parts.append(f"shape_unif={cu:.1f}")
 
-    # Optionally visualize
-    try:
-        import matplotlib.pyplot as plt
+        if "population_uniformity" in config:
+            pu = config["population_uniformity"]
+            title_parts.append(f"pop_unif={pu:.1f}")
 
-        plt.figure(figsize=(8, 6))
-        plt.scatter(X[:, 0], X[:, 1], s=10, alpha=0.7)
-        plt.title("Example Generated Dataset")
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.grid(True, alpha=0.3)
-        plt.savefig("example_dataset.png")
-        print("Saved visualization to 'example_dataset.png'")
-    except ImportError:
-        print("Matplotlib not available for visualization")
+        title = " - ".join(title_parts)
+
+        # Create filename with configuration key
+        filename = f"{section}"
+        output_path = f"{output_dir}/{filename}.png"
+
+        # Visualize dataset using plot_clusters
+        fig = plot_clusters(
+            X,
+            labels=None,  # No clustering labels
+            use_tsne=(dimension > 2),
+            title=title,
+            output_path=output_path,
+        )
+
+        # Close the figure to avoid memory issues
+        plt.close(fig)
