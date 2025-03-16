@@ -42,20 +42,20 @@ cpdef object select_grid_points(
     """
     # Type the arrays inside the function
     cdef np.ndarray[np.float64_t, ndim=2] X_arr = X
-    
+
     cdef Py_ssize_t N = X_arr.shape[0]
     cdef Py_ssize_t D = X_arr.shape[1]
-    
+
     # Get the appropriate distance function and process inv_cov
     cdef object dist_func_wrapper
     cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
     dist_func_wrapper, inv_cov_arr = get_distance_function(metric, inv_cov, D)
     cdef dist_func_t dist_func = _get_distance_function(metric)
-    
+
     # Allocate result arrays
     cdef np.ndarray[np.int32_t, ndim=1] idxgrid = np.empty(ngrid, dtype=np.int32)
     cdef np.ndarray[np.float64_t, ndim=2] Y = np.empty((ngrid, D), dtype=np.float64)
-    
+
     # Track the min distance of each point to any chosen grid point
     cdef np.ndarray[np.float64_t, ndim=1] dmin_ = np.empty(N, dtype=np.float64)
 
@@ -67,7 +67,7 @@ cpdef object select_grid_points(
     # Initialize dmin_ using the first chosen grid point
     cdef Py_ssize_t i, j
     cdef double max_min_dist, d
-    
+
     for j in range(N):
         dmin_[j] = dist_func(X_arr[j, :], Y[0, :], inv_cov_arr)
 
@@ -80,11 +80,11 @@ cpdef object select_grid_points(
             if dmin_[j] > max_min_dist:
                 max_min_dist = dmin_[j]
                 jmax = j
-        
+
         # jmax is our new grid point
         idxgrid[i] = jmax
         Y[i, :] = X_arr[jmax, :]
-        
+
         # Update dmin_ with this newly selected point
         for j in range(N):
             d = dist_func(X_arr[j, :], Y[i, :], inv_cov_arr)

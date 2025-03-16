@@ -12,28 +12,31 @@ Grid selection is useful for:
 - Speeding up computations by working with a representative subset
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 from pypamm import select_grid_points
 
 # Set random seed for reproducibility
 np.random.seed(42)
+
 
 # Generate a synthetic dataset: 1000 points in 2D with clusters
 def generate_clustered_data(n_samples=1000, n_clusters=5):
     """Generate synthetic clustered data."""
     centers = np.random.rand(n_clusters, 2) * 10
     data = []
-    
+
     # Generate points around each center
     points_per_cluster = n_samples // n_clusters
     for i in range(n_clusters):
         cluster_points = np.random.randn(points_per_cluster, 2) * 0.5 + centers[i]
         data.append(cluster_points)
-    
+
     # Combine all clusters
     X = np.vstack(data)
     return X
+
 
 # Generate data
 X = generate_clustered_data(n_samples=1000, n_clusters=5)
@@ -55,20 +58,20 @@ plt.ylabel("Y")
 for i, ngrid in enumerate(grid_sizes):
     # Select grid points
     grid_indices, grid_points = select_grid_points(X, ngrid=ngrid)
-    
+
     # Plot the results
     plt.subplot(1, len(grid_sizes) + 1, i + 2)
-    
+
     # Plot original data as background
-    plt.scatter(X[:, 0], X[:, 1], s=5, alpha=0.2, color='gray')
-    
+    plt.scatter(X[:, 0], X[:, 1], s=5, alpha=0.2, color="gray")
+
     # Plot selected grid points
-    plt.scatter(grid_points[:, 0], grid_points[:, 1], s=20, color='red')
-    
+    plt.scatter(grid_points[:, 0], grid_points[:, 1], s=20, color="red")
+
     plt.title(f"Grid Selection\n(ngrid={ngrid}, {grid_points.shape[0]} points)")
     plt.xlabel("X")
     plt.ylabel("Y")
-    
+
     print(f"Grid size {ngrid}: Selected {grid_points.shape[0]} points")
 
 plt.tight_layout()
@@ -98,4 +101,4 @@ print(f"Selected {grid_points.shape[0]} points with ngrid=30")
 print(f"Grid indices shape: {grid_indices.shape}")
 print(f"Grid points shape: {grid_points.shape}")
 
-print("\nExample completed successfully!") 
+print("\nExample completed successfully!")

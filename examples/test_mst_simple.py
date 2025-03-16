@@ -6,6 +6,7 @@ from a set of points, without using matplotlib for visualization.
 """
 
 import numpy as np
+
 from pypamm import build_mst
 
 # Set random seed for reproducibility
@@ -22,7 +23,7 @@ print(f"MST contains {len(edges)} edges")
 # Print the first few edges
 print("\nFirst 5 edges of the MST:")
 for i, (u, v, w) in enumerate(edges[:5]):
-    print(f"Edge {i+1}: Point {int(u)} to Point {int(v)} with weight {w:.4f}")
+    print(f"Edge {i + 1}: Point {int(u)} to Point {int(v)} with weight {w:.4f}")
 
 # Calculate the total weight of the MST
 total_weight = sum(w for _, _, w in edges)
@@ -43,14 +44,17 @@ assert len(all_vertices) == X.shape[0], f"MST should include all {X.shape[0]} ve
 # We can use a simple Union-Find data structure for this
 parent = list(range(X.shape[0]))
 
+
 def find(x):
     x = int(x)  # Convert float to int
     if parent[x] != x:
         parent[x] = find(parent[x])
     return parent[x]
 
+
 def union(x, y):
     parent[find(x)] = find(y)
+
 
 # Union all edges
 for u, v, _ in edges:
@@ -65,9 +69,9 @@ print("\nAll MST properties verified successfully!")
 
 # Calculate some statistics about the edges
 weights = [w for _, _, w in edges]
-print(f"\nEdge weight statistics:")
+print("\nEdge weight statistics:")
 print(f"  Minimum weight: {min(weights):.4f}")
 print(f"  Maximum weight: {max(weights):.4f}")
-print(f"  Average weight: {sum(weights)/len(weights):.4f}")
+print(f"  Average weight: {sum(weights) / len(weights):.4f}")
 
-print("\nTest completed successfully!") 
+print("\nTest completed successfully!")

@@ -9,14 +9,25 @@ from pypamm.distance_metrics cimport (
 )
 
 # Helper functions for Union-Find
-cdef int find_root(int v, int[:] parent) nogil:
+cdef int find_root(int v, int[:] parent) except? -1 nogil:
+    """
+    Find the root of the set containing v with path compression.
+    Returns -1 only in case of error.
+    """
     while parent[v] != v:
         parent[v] = parent[parent[v]]  # Path compression
         v = parent[v]
     return v
 
-cdef void union_sets(int v1, int v2, int[:] parent) nogil:
-    parent[find_root(v1, parent)] = find_root(v2, parent)
+cdef void union_sets(int v1, int v2, int[:] parent) noexcept nogil:
+    """
+    Union the sets containing v1 and v2.
+    This function cannot raise exceptions.
+    """
+    cdef int root1 = find_root(v1, parent)
+    cdef int root2 = find_root(v2, parent)
+    if root1 != root2:
+        parent[root1] = root2
 
 # ------------------------------------------------------------------------------
 # 1. Minimum Spanning Tree (MST) Using Kruskal's Algorithm
@@ -55,8 +66,11 @@ cpdef np.ndarray[np.float64_t, ndim=2] build_mst(np.ndarray[np.float64_t, ndim=2
     # Construct MST using Kruskal's Algorithm
     cdef list mst_edges = []
     cdef double dist
+    cdef int root_i, root_j
     for dist, i, j in edges:
-        if find_root(i, parent_view) != find_root(j, parent_view):
+        root_i = find_root(i, parent_view)
+        root_j = find_root(j, parent_view)
+        if root_i != root_j:
             union_sets(i, j, parent_view)
             mst_edges.append((i, j, dist))
             if len(mst_edges) == N - 1:

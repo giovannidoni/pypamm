@@ -12,36 +12,39 @@ Quick Shift is useful for:
 - Finding modes in the data distribution
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.stats import gaussian_kde
-from pypamm import quick_shift, quick_shift_clustering
+
+from pypamm import quick_shift
 
 # Set random seed for reproducibility
 np.random.seed(42)
+
 
 # Generate a synthetic dataset with multiple clusters
 def generate_multi_cluster_data(n_samples=500):
     """Generate synthetic data with multiple clusters of different shapes."""
     # Cluster 1: Gaussian cluster
     cluster1 = np.random.randn(n_samples // 3, 2) * 0.5 + np.array([2, 2])
-    
+
     # Cluster 2: Elongated cluster
     x2 = np.random.randn(n_samples // 3, 1) * 1.5
     y2 = np.random.randn(n_samples // 3, 1) * 0.3
     cluster2 = np.hstack([x2 + 6, y2 + 5])
-    
+
     # Cluster 3: Ring-shaped cluster
-    theta = np.random.uniform(0, 2*np.pi, n_samples // 3)
+    theta = np.random.uniform(0, 2 * np.pi, n_samples // 3)
     r = np.random.normal(2, 0.2, n_samples // 3)
     x3 = r * np.cos(theta) + 8
     y3 = r * np.sin(theta) + 1
     cluster3 = np.vstack([x3, y3]).T
-    
+
     # Combine all clusters
     X = np.vstack([cluster1, cluster2, cluster3])
-    
+
     return X
+
 
 # Generate data
 X = generate_multi_cluster_data(n_samples=600)
@@ -57,8 +60,8 @@ plt.figure(figsize=(15, 10))
 
 # Plot the original data with density
 plt.subplot(2, 2, 1)
-plt.scatter(X[:, 0], X[:, 1], c=prob, cmap='viridis', s=30)
-plt.colorbar(label='Normalized Density')
+plt.scatter(X[:, 0], X[:, 1], c=prob, cmap="viridis", s=30)
+plt.colorbar(label="Normalized Density")
 plt.title("Original Data with Density Estimation")
 plt.xlabel("X")
 plt.ylabel("Y")
@@ -69,42 +72,36 @@ max_dist = 3.0  # Maximum distance threshold
 
 for i, lambda_qs in enumerate(lambda_values):
     # Run Quick Shift clustering
-    cluster_labels, cluster_centers = quick_shift(
-        X, 
-        prob=prob, 
-        ngrid=50, 
-        lambda_qs=lambda_qs, 
-        max_dist=max_dist
-    )
-    
+    cluster_labels, cluster_centers = quick_shift(X, prob=prob, ngrid=50, lambda_qs=lambda_qs, max_dist=max_dist)
+
     # Plot the results
-    plt.subplot(2, 2, i+2)
-    
+    plt.subplot(2, 2, i + 2)
+
     # Plot points colored by cluster
     unique_labels = np.unique(cluster_labels)
     colors = plt.cm.tab10(np.linspace(0, 1, len(unique_labels)))
-    
+
     for j, label in enumerate(unique_labels):
         mask = cluster_labels == label
-        plt.scatter(X[mask, 0], X[mask, 1], color=colors[j], s=30, alpha=0.7, label=f"Cluster {j+1}")
-    
+        plt.scatter(X[mask, 0], X[mask, 1], color=colors[j], s=30, alpha=0.7, label=f"Cluster {j + 1}")
+
     # Plot cluster centers
     center_points = X[cluster_centers.astype(int)]
-    plt.scatter(center_points[:, 0], center_points[:, 1], c='red', s=100, marker='*', label='Cluster Centers')
-    
+    plt.scatter(center_points[:, 0], center_points[:, 1], c="red", s=100, marker="*", label="Cluster Centers")
+
     plt.title(f"Quick Shift Clustering\n(lambda={lambda_qs}, {len(unique_labels)} clusters)")
     plt.xlabel("X")
     plt.ylabel("Y")
-    
+
     # Print some statistics
     print(f"\nQuick Shift with lambda={lambda_qs}:")
     print(f"  - Number of clusters: {len(unique_labels)}")
     print(f"  - Number of cluster centers: {len(cluster_centers)}")
-    
+
     # Count points in each cluster
     for j, label in enumerate(unique_labels):
         count = np.sum(cluster_labels == label)
-        print(f"  - Cluster {j+1}: {count} points")
+        print(f"  - Cluster {j + 1}: {count} points")
 
 plt.tight_layout()
 plt.savefig("quick_shift_example.png")
@@ -139,4 +136,4 @@ print("- Sensitive to parameter settings")
 print("- Requires density estimation, which can be computationally expensive")
 print("- May struggle with clusters of varying densities")
 
-print("\nExample completed successfully!") 
+print("\nExample completed successfully!")

@@ -1,14 +1,11 @@
 import numpy as np
-from typing import Tuple, List, Optional, Union, Any
-from numpy.typing import NDArray, ArrayLike
 from joblib import Parallel, delayed
-from scipy.spatial.distance import cdist
-from scipy.sparse.csgraph import connected_components
-from pypamm.grid_selection import select_grid_points
-from pypamm.neighbor_graph import build_neighbor_graph
-from pypamm.quick_shift import quick_shift_clustering
-from pypamm.clustering.cluster_utils import compute_cluster_covariance, merge_clusters
+from numpy.typing import ArrayLike, NDArray
+
 from pypamm.clustering.adjacency import compute_adjacency, merge
+from pypamm.grid_selection import select_grid_points
+from pypamm.quick_shift_wrapper import quick_shift
+
 
 class PAMMCluster:
     """
@@ -16,18 +13,18 @@ class PAMMCluster:
     """
 
     def __init__(
-        self, 
-        n_grid: int = 20, 
-        k_neighbors: int = 5, 
-        metric: str = "euclidean", 
-        merge_threshold: float = 0.8, 
-        bootstrap: bool = True, 
-        n_bootstrap: int = 10, 
-        n_jobs: int = 1
+        self,
+        n_grid: int = 20,
+        k_neighbors: int = 5,
+        metric: str = "euclidean",
+        merge_threshold: float = 0.8,
+        bootstrap: bool = True,
+        n_bootstrap: int = 10,
+        n_jobs: int = 1,
     ):
         """
         Initialize the PAMM clustering algorithm.
-        
+
         Parameters
         ----------
         n_grid : int, default=20
@@ -53,15 +50,15 @@ class PAMMCluster:
         self.n_bootstrap = n_bootstrap
         self.n_jobs = n_jobs  # Parallel processing
 
-    def _single_run(self, X: NDArray[np.float64]) -> Tuple[NDArray[np.int32], NDArray[np.float64]]:
+    def _single_run(self, X: NDArray[np.float64]) -> tuple[NDArray[np.int32], NDArray[np.float64]]:
         """
         Run a single clustering pipeline iteration.
-        
+
         Parameters
         ----------
         X : array-like, shape (n_samples, n_features)
             Input data.
-            
+
         Returns
         -------
         cluster_labels : array, shape (n_samples,)
@@ -70,24 +67,28 @@ class PAMMCluster:
             Probability values for each data point.
         """
         N, D = X.shape
-        idx_grid, grid_points = select_grid_points(X, self.n_grid, self.metric)
-        neighbor_graph = build_neighbor_graph(grid_points, self.k_neighbors, metric=self.metric)
+        _, grid_points = select_grid_points(X, self.n_grid, self.metric)
+        # Neighbor graph is currently unused but may be needed in future versions
+        # neighbor_graph = build_neighbor_graph(grid_points, self.k_neighbors, metric=self.metric)
         prob = np.ones(N) / N  # Uniform probabilities
-        cluster_labels, cluster_centers = quick_shift_clustering(X, prob, self.n_grid, self.metric)
-        cluster_covariances = np.array([np.eye(D) for _ in range(len(cluster_centers))])
+        cluster_labels, cluster_centers = quick_shift(X, prob, self.n_grid, self.metric)
+        # Cluster covariances are currently unused but may be needed in future versions
+        # cluster_covariances = np.array([np.eye(D) for _ in range(len(cluster_centers))])
         return cluster_labels, prob
 
-    def fit(self, X: ArrayLike, single_iteration: bool = False) -> Union[NDArray[np.int32], Tuple[NDArray[np.int32], NDArray[np.float64]]]:
+    def fit(
+        self, X: ArrayLike, single_iteration: bool = False
+    ) -> NDArray[np.int32] | tuple[NDArray[np.int32], NDArray[np.float64]]:
         """
         Run the full PAMM clustering pipeline.
-        
+
         Parameters
         ----------
         X : array-like, shape (n_samples, n_features)
             Input data.
         single_iteration : bool, default=False
             If True, runs only one clustering iteration (no bootstrapping).
-            
+
         Returns
         -------
         labels : array, shape (n_samples,)
@@ -104,8 +105,7 @@ class PAMMCluster:
 
         # Step 2: Bootstrap multiple clusterings
         boot_results = Parallel(n_jobs=self.n_jobs)(
-            delayed(self._single_run)(X[np.random.choice(N, N, replace=True)]) 
-            for _ in range(self.n_bootstrap)
+            delayed(self._single_run)(X[np.random.choice(N, N, replace=True)]) for _ in range(self.n_bootstrap)
         )
 
         # Step 3: Compute adjacency matrix from bootstrapped results

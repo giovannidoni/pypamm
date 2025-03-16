@@ -105,4 +105,4 @@ Thumbs.db
 # Exclude generated C files from Cython but keep the pyx files
 # src/pamm/*.c
 # Keep the original pyx files
-# !src/pamm/*.pyx 
+# !src/pamm/*.pyx

@@ -130,18 +130,18 @@ cdef double dist_minkowski(
 def get_distance_function(str metric, object inv_cov=None, int D=0):
     """
     Select the appropriate distance function based on the metric.
-    
+
     Parameters:
     - metric: String specifying the distance metric
     - inv_cov: Optional parameter for Mahalanobis and Minkowski distances
     - D: Dimensionality of the data (needed for validation)
-    
+
     Returns:
     - dist_func: A Python wrapper function for the selected distance function
     - inv_cov_arr: The processed inv_cov parameter (or a dummy if not needed)
     """
     cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
-    
+
     # Select appropriate distance function
     if metric == "euclidean":
         def dist_func_wrapper(a, b, inv_cov_param):
@@ -173,14 +173,14 @@ def get_distance_function(str metric, object inv_cov=None, int D=0):
             return dist_minkowski(a, b, inv_cov_param)
     else:
         raise ValueError(f"Unsupported metric '{metric}'")
-    
+
     # Create a dummy parameter for metrics that don't use inv_cov
     if inv_cov is None:
         inv_cov_arr = np.zeros((1, 1), dtype=np.float64)
         if metric == "minkowski":
             # Default to Euclidean distance (p=2) if not specified
             inv_cov_arr[0, 0] = 2.0
-    
+
     return dist_func_wrapper, inv_cov_arr
 
 # Internal function to get the actual distance function (for Cython use only)
@@ -198,4 +198,4 @@ cdef dist_func_t _get_distance_function(str metric) except *:
     elif metric == "minkowski":
         return dist_minkowski
     else:
-        raise ValueError(f"Unsupported metric '{metric}'") 
+        raise ValueError(f"Unsupported metric '{metric}'")

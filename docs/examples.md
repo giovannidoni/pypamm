@@ -175,10 +175,10 @@ prob = prob / np.max(prob)  # Normalize to [0, 1]
 
 # Run Quick Shift clustering
 cluster_labels, cluster_centers = quick_shift(
-    X, 
-    prob=prob, 
-    ngrid=50, 
-    lambda_qs=1.0, 
+    X,
+    prob=prob,
+    ngrid=50,
+    lambda_qs=1.0,
     max_dist=3.0
 )
 ```
@@ -332,10 +332,10 @@ prob = prob / np.max(prob)  # Normalize to [0, 1]
 
 # Step 5: Run Quick Shift clustering
 cluster_labels, cluster_centers = quick_shift(
-    grid_points, 
-    prob=prob, 
-    ngrid=20, 
-    lambda_qs=1.0, 
+    grid_points,
+    prob=prob,
+    ngrid=20,
+    lambda_qs=1.0,
     max_dist=3.0
 )
 ```
@@ -385,4 +385,4 @@ These examples require the following dependencies (automatically installed with 
 
 - NumPy
 - SciPy
-- Matplotlib 
+- Matplotlib

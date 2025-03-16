@@ -7,6 +7,6 @@ from pypamm.clustering.cluster_utils_wrapper import compute_cluster_covariance, 
 
 # Define what should be imported with "from pypamm.clustering import *"
 __all__ = [
-    'compute_cluster_covariance',
-    'merge_clusters',
+    "compute_cluster_covariance",
+    "merge_clusters",
 ]

@@ -1,7 +1,7 @@
 # PyPAMM
 
 [![Python Package](https://github.com/giovannidoni/pypamm/actions/workflows/python-package.yml/badge.svg)](https://github.com/giovannidoni/pypamm/actions/workflows/python-package.yml)
-[![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://github.com/giovannidoni/pypamm)
+[![Python Versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://github.com/giovannidoni/pypamm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 PyPAMM is a Python implementation of the Probabilistic Analysis of Molecular Motifs (PAMM) method, originally developed for analyzing molecular dynamics simulations. This package provides efficient, Cython-accelerated implementations of the core PAMM algorithms.
@@ -33,7 +33,7 @@ The original PAMM method was developed by the Laboratory of Computational Scienc
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.10 or higher
 - NumPy 2.0.0 or higher
 - Cython 3.0.0 or higher
 - SciPy 1.12.0 or higher
@@ -109,13 +109,45 @@ poetry run pytest
 - `tests/`: Unit tests
 - `.github/workflows/`: CI/CD workflows
 
+### Code Formatting and Linting
+
+This project uses [Ruff](https://github.com/astral-sh/ruff) for code formatting and linting, configured with a line length of 120 characters.
+
+We use [pre-commit](https://pre-commit.com/) to automatically run Ruff before each commit. To set up pre-commit:
+
+1. Install the development dependencies:
+   ```bash
+   poetry install --with dev
+   ```
+
+2. Install the pre-commit hooks:
+   ```bash
+   poetry run pre-commit install
+   ```
+
+3. Now, Ruff will automatically format and lint your code before each commit.
+
+You can also run the hooks manually on all files:
+```bash
+poetry run pre-commit run --all-files
+```
+
+Or run Ruff directly:
+```bash
+# Format code
+poetry run ruff format .
+
+# Lint code
+poetry run ruff check --fix .
+```
+
 ## Continuous Integration and Deployment
 
 PyPAMM uses GitHub Actions for continuous integration and deployment.
 
 ### GitHub Actions Workflows
 
-#### 1. Python Package (`python-package.yml`)
+#### Python Package (`python-package.yml`)
 
 This workflow runs tests on multiple Python versions and operating systems.
 
@@ -124,22 +156,8 @@ This workflow runs tests on multiple Python versions and operating systems.
 - Pull requests to `main` branch
 
 **Jobs:**
-- **test**: Runs tests on Ubuntu and macOS with Python 3.9, 3.10, 3.11, and 3.12
+- **test**: Runs tests on Ubuntu and macOS with Python 3.10, 3.11, and 3.12
 - **build**: Builds the package using Poetry and uploads the artifacts
-
-#### 2. Build Wheels (`build-wheels.yml`)
-
-This workflow builds wheels for different platforms using cibuildwheel.
-
-**Triggered by:**
-- Push to `main` branch
-- Push of tags starting with `v`
-- Pull requests to `main` branch
-
-**Jobs:**
-- **build_wheels**: Builds wheels for Ubuntu, Windows, and macOS with Python 3.9, 3.10, 3.11, and 3.12
-- **build_sdist**: Builds a source distribution
-- **publish**: Publishes the built distributions to PyPI (only when a tag is pushed)
 
 ### Publishing to PyPI
 
@@ -152,8 +170,6 @@ To publish a new release to PyPI:
    git tag v0.1.0
    git push origin v0.1.0
    ```
-
-This will trigger the `build-wheels.yml` workflow, which will build wheels for all platforms and publish them to PyPI.
 
 ### Required Secrets
 
