@@ -61,7 +61,9 @@ def quick_shift(
         return _neighbor_graph_quick_shift(X, prob, neighbor_graph, lambda_qs)
     else:
         # Call the Cython implementation with the correct parameter order
-        return _quick_shift_clustering(X, prob, ngrid, None, metric, lambda_qs, max_dist)
+        # Extract just the labels from the tuple returned by _quick_shift_clustering
+        labels, _ = _quick_shift_clustering(X, prob, ngrid, None, metric, lambda_qs, max_dist)
+        return labels
 
 
 def _neighbor_graph_quick_shift(
