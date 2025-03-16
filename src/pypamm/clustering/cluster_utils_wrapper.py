@@ -12,11 +12,15 @@ from pypamm.clustering.cluster_utils import (
 from pypamm.clustering.cluster_utils import (
     merge_clusters as _merge_clusters_cython,
 )
+from pypamm.clustering.cluster_utils import (
+    reindex_clusters as _reindex_clusters_cython,
+)
 
 # Export all functions
 __all__ = [
     "compute_cluster_covariance",
     "merge_clusters",
+    "reindex_clusters",
 ]
 
 
@@ -140,3 +144,24 @@ def merge_clusters(
 
     # Call the Cython implementation
     return _merge_clusters_cython(X, probabilities, cluster_labels, covariance_matrices, threshold)
+
+
+def reindex_clusters(cluster_labels: ArrayLike) -> NDArray[np.int32]:
+    """
+    Ensures cluster labels are contiguous (reindexes clusters).
+
+    Parameters:
+    ----------
+    cluster_labels : array-like, shape (n_samples,)
+        Cluster assignments for each data point. Should be integers.
+
+    Returns:
+    -------
+    new_labels : array, shape (n_samples,)
+        Updated cluster labels with contiguous numbering.
+    """
+    # Convert input to numpy array if it isn't already
+    cluster_labels = np.asarray(cluster_labels, dtype=np.int32)
+
+    # Call the Cython implementation
+    return _reindex_clusters_cython(cluster_labels)

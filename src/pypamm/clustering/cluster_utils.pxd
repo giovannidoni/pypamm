@@ -30,3 +30,7 @@ cpdef np.ndarray[np.int32_t, ndim=1] merge_clusters(
     np.ndarray[np.float64_t, ndim=3] cluster_covariances,
     double threshold=*
 )
+
+cpdef np.ndarray[np.int32_t, ndim=1] reindex_clusters(
+    np.ndarray[np.int32_t, ndim=1] cluster_labels
+)

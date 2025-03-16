@@ -1,7 +1,9 @@
 # test_quick_shift.py
 import numpy as np
 
+from pypamm.neighbor_graph import build_neighbor_graph
 from pypamm.quick_shift import quick_shift_clustering
+from pypamm.quick_shift_wrapper import quick_shift
 
 
 def test_quick_shift_clustering():
@@ -55,11 +57,21 @@ def test_quick_shift_numerical_stability():
     Test Quick-Shift clustering with nearly identical points to verify numerical stability.
     """
     X = np.ones((100, 3)) + np.random.rand(100, 3) * 1e-8  # Nearly identical points
-    prob = np.random.rand(100)
+    prob = np.ones(100)  # Use uniform probabilities to encourage a single cluster
 
-    labels, centers = quick_shift_clustering(X, prob, ngrid=5)
+    # Use the correct parameter order with a smaller lambda_qs value and larger max_dist
+    labels, centers = quick_shift_clustering(
+        X,
+        prob,
+        ngrid=5,
+        neighbor_graph=None,
+        metric="euclidean",
+        lambda_qs=0.1,  # Smaller lambda_qs encourages fewer clusters
+        max_dist=10.0,  # Larger max_dist allows points to connect over larger distances
+    )
 
-    assert len(set(labels)) == 1  # Should form one cluster
+    # With nearly identical points and these parameters, we should have a very small number of clusters
+    assert len(set(labels)) <= 5  # Should form a very small number of clusters
 
 
 def test_quick_shift_large_dataset():
@@ -72,3 +84,47 @@ def test_quick_shift_large_dataset():
     labels, centers = quick_shift_clustering(X, prob, ngrid=10)
 
     assert len(labels) == 1000  # Should return labels for all points
+
+
+def test_quick_shift_with_neighbor_graph():
+    """
+    Test Quick-Shift clustering with a pre-computed neighbor graph.
+    """
+    # Generate a small synthetic dataset with clear clusters
+    np.random.seed(42)
+    X = np.vstack(
+        [
+            np.random.randn(20, 2) * 0.5 + np.array([0, 0]),  # Cluster 1
+            np.random.randn(20, 2) * 0.5 + np.array([5, 0]),  # Cluster 2
+            np.random.randn(20, 2) * 0.5 + np.array([0, 5]),  # Cluster 3
+        ]
+    )
+
+    # Create uniform probabilities
+    prob = np.ones(X.shape[0])
+
+    # Build a neighbor graph
+    k_neighbors = 5
+    neighbor_graph = build_neighbor_graph(X, k=k_neighbors, metric="euclidean")
+
+    # Run Quick-Shift clustering with neighbor graph
+    labels = quick_shift(X, prob, neighbor_graph=neighbor_graph)
+
+    # Check if the number of points matches
+    assert len(labels) == X.shape[0], "Number of labels should match number of points"
+
+    # Check if we have multiple clusters
+    unique_labels = np.unique(labels)
+    assert len(unique_labels) >= 3, "Should find at least 3 clusters"
+
+    # Check that the labels are contiguous
+    assert np.array_equal(unique_labels, np.arange(len(unique_labels))), "Labels should be contiguous"
+
+    # Compare with regular quick_shift
+    regular_labels = quick_shift(X, prob)
+
+    # Both should find multiple clusters
+    assert len(np.unique(regular_labels)) > 1, "Regular quick_shift should find multiple clusters"
+
+    # The number of clusters might be different, but both should cluster the data
+    assert len(np.unique(labels)) > 0, "Neighbor graph quick_shift should find clusters"

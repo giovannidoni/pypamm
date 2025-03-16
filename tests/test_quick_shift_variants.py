@@ -102,11 +102,44 @@ def test_max_dist_parameter(random_data):
 def test_lambda_parameter(random_data):
     """Test the lambda_qs parameter in both implementations."""
     # Run vanilla QuickShift with different lambda values
-    labels_small_lambda, centers_small_lambda = quick_shift(random_data, None, ngrid=10, lambda_qs=0.5)
+    labels_small_lambda, centers_small_lambda = quick_shift(
+        random_data,
+        None,
+        ngrid=10,
+        metric="euclidean",  # Explicitly specify metric as a string
+        lambda_qs=0.5,
+    )
 
-    labels_large_lambda, centers_large_lambda = quick_shift(random_data, None, ngrid=10, lambda_qs=2.0)
+    labels_large_lambda, centers_large_lambda = quick_shift(
+        random_data,
+        None,
+        ngrid=10,
+        metric="euclidean",  # Explicitly specify metric as a string
+        lambda_qs=2.0,
+    )
 
     # Lambda affects the clustering, but the exact effect depends on the data
     # Just check that the function runs without errors
     assert labels_small_lambda.shape == (len(random_data),)
     assert labels_large_lambda.shape == (len(random_data),)
+
+    # Run KDE-enhanced QuickShift with different lambda values
+    labels_kde_small_lambda, centers_kde_small_lambda = quick_shift_kde(
+        random_data,
+        bandwidth=0.1,
+        ngrid=10,
+        metric="euclidean",  # Explicitly specify metric as a string
+        lambda_qs=0.5,
+    )
+
+    labels_kde_large_lambda, centers_kde_large_lambda = quick_shift_kde(
+        random_data,
+        bandwidth=0.1,
+        ngrid=10,
+        metric="euclidean",  # Explicitly specify metric as a string
+        lambda_qs=2.0,
+    )
+
+    # Check that the function runs without errors
+    assert labels_kde_small_lambda.shape == (len(random_data),)
+    assert labels_kde_large_lambda.shape == (len(random_data),)

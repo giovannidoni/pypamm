@@ -10,6 +10,7 @@ __all__ = [
     "get_distance_function",
     "compute_cluster_covariance",
     "merge_clusters",
+    "reindex_clusters",
     "quick_shift",
     "quick_shift_kde",
     "build_mst",
@@ -22,7 +23,7 @@ __all__ = [
 ]
 
 # Import the modules
-from pypamm.clustering.cluster_utils_wrapper import compute_cluster_covariance, merge_clusters
+from pypamm.clustering.cluster_utils_wrapper import compute_cluster_covariance, merge_clusters, reindex_clusters
 
 # Import density module
 from pypamm.density import compute_kde, gauss_prepare, kde_bootstrap_error, kde_cutoff, kde_output
