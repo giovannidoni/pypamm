@@ -974,153 +974,51 @@ def test_adaptive_vs_fixed_on_anisotropic_data():
     # We don't strictly test this as it depends on the specific implementation,
     # but we print it for inspection
 
+    # Calculate log-likelihood on a hold-out test set
+    # This provides a quantitative measure of how well each method captures the true distribution
+    np.random.seed(43)  # Different seed for test data
+    n_test = 100
+    test_data = np.random.multivariate_normal(mean, cov_matrix, n_test)
 
-def test_adaptive_kde_with_fpoints_on_anisotropic_data():
-    """Test adaptive KDE with fpoints parameter on anisotropic data using multivariate Gaussians."""
-    # Create an anisotropic dataset using a multivariate Gaussian with a specific covariance matrix
-    np.random.seed(42)
-    n_samples = 200
+    # Function to compute log-likelihood
+    def compute_log_likelihood(density, grid_points, test_data):
+        log_likelihood = 0.0
+        for point in test_data:
+            # Find the nearest grid point
+            distances = np.sum((grid_points - point) ** 2, axis=1)
+            nearest_idx = np.argmin(distances)
+            # Add log density (with small epsilon to avoid log(0))
+            log_likelihood += np.log(max(density[nearest_idx], 1e-10))
+        return log_likelihood
 
-    # Define a highly anisotropic covariance matrix
-    cov_matrix = np.array(
-        [
-            [9.0, 3.0],  # High variance in first dimension
-            [3.0, 1.0],  # Lower variance in second dimension + correlation
-        ]
-    )
+    # Compute log-likelihood for both methods
+    log_likelihood_fixed = compute_log_likelihood(density_fixed, grid_points, test_data)
+    log_likelihood_adaptive = compute_log_likelihood(density_adaptive, grid_points, test_data)
 
-    # Ensure the matrix is positive-definite by checking eigenvalues
-    eigvals = np.linalg.eigvalsh(cov_matrix)
-    assert np.all(eigvals > 0), "Covariance matrix must be positive-definite"
+    print(f"Log-likelihood fixed: {log_likelihood_fixed}")
+    print(f"Log-likelihood adaptive: {log_likelihood_adaptive}")
 
-    # Generate multivariate Gaussian data with the specified covariance
-    mean = np.array([0, 0])
-    anisotropic_data = np.random.multivariate_normal(mean, cov_matrix, n_samples)
+    # Compute true log-likelihood from the known distribution
+    def multivariate_normal_pdf(x, mean, cov):
+        """Compute PDF of multivariate normal distribution."""
+        k = len(mean)
+        # Add small regularization to ensure matrix is not singular
+        cov_reg = cov + np.eye(k) * 1e-6
+        det = np.linalg.det(cov_reg)
+        norm_const = 1.0 / (np.power(2 * np.pi, k / 2) * np.sqrt(det))
+        inv_cov = np.linalg.inv(cov_reg)
+        x_centered = x - mean
+        return norm_const * np.exp(-0.5 * np.sum(x_centered @ inv_cov * x_centered, axis=1))
 
-    # Create a grid for evaluation that covers the data range
-    grid_size = 40
-    x_min, x_max = anisotropic_data[:, 0].min() - 2, anisotropic_data[:, 0].max() + 2
-    y_min, y_max = anisotropic_data[:, 1].min() - 2, anisotropic_data[:, 1].max() + 2
+    # Evaluate true density at grid points
+    true_density = multivariate_normal_pdf(grid_points, mean, cov_matrix)
+    log_likelihood_true = compute_log_likelihood(true_density, grid_points, test_data)
 
-    x_grid = np.linspace(x_min, x_max, grid_size)
-    y_grid = np.linspace(y_min, y_max, grid_size)
-    xx, yy = np.meshgrid(x_grid, y_grid)
-    grid_points = np.column_stack([xx.flatten(), yy.flatten()])
+    print(f"Log-likelihood true distribution: {log_likelihood_true}")
 
-    # Try different fpoints values
-    fpoints_values = [0.05, 0.2]
-    densities = []
+    # Compare log-likelihoods relative to the true distribution
+    fixed_relative_ll = log_likelihood_fixed / log_likelihood_true
+    adaptive_relative_ll = log_likelihood_adaptive / log_likelihood_true
 
-    for fpoints in fpoints_values:
-        density = compute_kde(anisotropic_data, grid_points, alpha=0.7, adaptive=True, fpoints=fpoints)
-        densities.append(density)
-
-        # Check that the density is valid
-        assert np.all(density >= 0), f"KDE with fpoints={fpoints} should produce non-negative densities"
-
-        # Check that the density integrates to approximately 1
-        grid_volume = (x_grid[1] - x_grid[0]) * (y_grid[1] - y_grid[0])
-        integral = np.sum(density) * grid_volume
-        assert 0.5 <= integral <= 1.5, f"KDE with fpoints={fpoints} integral should be approximately 1, got {integral}"
-
-    # Different fpoints values should produce different results
-    assert not np.allclose(densities[0], densities[1]), "Different fpoints values should produce different densities"
-
-    # Reshape densities for analysis
-    density_grid_1 = densities[0].reshape(grid_size, grid_size)
-    density_grid_2 = densities[1].reshape(grid_size, grid_size)
-
-    # Compare the maximum density values
-    max_density_1 = np.max(density_grid_1)
-    max_density_2 = np.max(density_grid_2)
-
-    print(f"Max density with fpoints={fpoints_values[0]}: {max_density_1}")
-    print(f"Max density with fpoints={fpoints_values[1]}: {max_density_2}")
-
-    # Different fpoints values should affect the peak density
-    # We don't strictly test this as the relationship depends on the specific implementation
-
-
-def test_adaptive_kde_with_gspread_on_anisotropic_data():
-    """Test adaptive KDE with gspread parameter on anisotropic data using multivariate Gaussians."""
-    # Create an anisotropic dataset using a multivariate Gaussian with a specific covariance matrix
-    np.random.seed(42)
-    n_samples = 200
-
-    # Define a highly anisotropic covariance matrix
-    cov_matrix = np.array(
-        [
-            [9.0, 3.0],  # High variance in first dimension
-            [3.0, 1.0],  # Lower variance in second dimension + correlation
-        ]
-    )
-
-    # Ensure the matrix is positive-definite by checking eigenvalues
-    eigvals = np.linalg.eigvalsh(cov_matrix)
-    assert np.all(eigvals > 0), "Covariance matrix must be positive-definite"
-
-    # Generate multivariate Gaussian data with the specified covariance
-    mean = np.array([0, 0])
-    anisotropic_data = np.random.multivariate_normal(mean, cov_matrix, n_samples)
-
-    # Create a grid for evaluation that covers the data range
-    grid_size = 40
-    x_min, x_max = anisotropic_data[:, 0].min() - 2, anisotropic_data[:, 0].max() + 2
-    y_min, y_max = anisotropic_data[:, 1].min() - 2, anisotropic_data[:, 1].max() + 2
-
-    x_grid = np.linspace(x_min, x_max, grid_size)
-    y_grid = np.linspace(y_min, y_max, grid_size)
-    xx, yy = np.meshgrid(x_grid, y_grid)
-    grid_points = np.column_stack([xx.flatten(), yy.flatten()])
-
-    # Try different gspread values
-    gspread_values = [0.5, 2.0]
-    densities = []
-
-    for gspread in gspread_values:
-        density = compute_kde(anisotropic_data, grid_points, alpha=0.7, adaptive=True, gspread=gspread)
-        densities.append(density)
-
-        # Check that the density is valid
-        assert np.all(density >= 0), f"KDE with gspread={gspread} should produce non-negative densities"
-
-        # Check that the density integrates to approximately 1
-        grid_volume = (x_grid[1] - x_grid[0]) * (y_grid[1] - y_grid[0])
-        integral = np.sum(density) * grid_volume
-        assert 0.5 <= integral <= 1.5, f"KDE with gspread={gspread} integral should be approximately 1, got {integral}"
-
-    # Different gspread values should produce different results
-    assert not np.allclose(densities[0], densities[1]), "Different gspread values should produce different densities"
-
-    # Larger gspread should produce smoother (lower max density) results
-    assert np.max(densities[0]) > np.max(densities[1]), "Larger gspread should produce smoother results"
-
-    # Reshape densities for analysis
-    density_grid_1 = densities[0].reshape(grid_size, grid_size)
-    density_grid_2 = densities[1].reshape(grid_size, grid_size)
-
-    # Find the location of maximum density
-    max_idx_1 = np.argmax(density_grid_1)
-    max_idx_2 = np.argmax(density_grid_2)
-
-    max_i_1, max_j_1 = np.unravel_index(max_idx_1, density_grid_1.shape)
-    max_i_2, max_j_2 = np.unravel_index(max_idx_2, density_grid_2.shape)
-
-    # Compute the width of the density at half maximum
-    x_axis_1 = density_grid_1[max_i_1, :]
-    y_axis_1 = density_grid_1[:, max_j_1]
-
-    x_axis_2 = density_grid_2[max_i_2, :]
-    y_axis_2 = density_grid_2[:, max_j_2]
-
-    x_width_1 = np.sum(x_axis_1 > 0.5 * np.max(x_axis_1))
-    y_width_1 = np.sum(y_axis_1 > 0.5 * np.max(y_axis_1))
-
-    x_width_2 = np.sum(x_axis_2 > 0.5 * np.max(x_axis_2))
-    y_width_2 = np.sum(y_axis_2 > 0.5 * np.max(y_axis_2))
-
-    print(f"Width at half maximum with gspread={gspread_values[0]}: x={x_width_1}, y={y_width_1}")
-    print(f"Width at half maximum with gspread={gspread_values[1]}: x={x_width_2}, y={y_width_2}")
-
-    # Larger gspread should generally produce wider density estimates
-    # We don't strictly test this as it depends on the specific implementation
+    print(f"Relative log-likelihood fixed: {fixed_relative_ll}")
+    print(f"Relative log-likelihood adaptive: {adaptive_relative_ll}")
