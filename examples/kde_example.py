@@ -95,7 +95,7 @@ for i, dataset_name in enumerate(datasets):
             density = compute_kde(X, grid_points, constant_bandwidth=bandwidth, adaptive=False)
 
         # Compute KDE on the visualization grid
-        viz_density = compute_kde(X, viz_grid, constant_bandwidth=bandwidth, adaptive=True)
+        viz_density = compute_kde(X, viz_grid, constant_bandwidth=0.1, adaptive=False)
 
         density_grid = viz_density.reshape(xx.shape)
 
