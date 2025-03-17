@@ -79,6 +79,13 @@ def create_extensions():
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
+        Extension(
+            "pypamm.lib",
+            ["src/pypamm/lib/_opx.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+        ),
         # Density modules
         Extension(
             "pypamm.density.kde",
