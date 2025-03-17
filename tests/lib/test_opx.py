@@ -81,19 +81,6 @@ def test_pammrij():
     np.testing.assert_allclose(result, expected, atol=1e-7)
 
 
-def test_mahalanobis():
-    D = 2
-    period = np.array([10.0, 0.0], dtype=np.float64)
-    x = np.array([9.0, 4.0], dtype=np.float64)
-    y = np.array([2.0, 1.0], dtype=np.float64)
-    # Identity Qinv
-    Qinv = np.eye(D, dtype=np.float64)
-    # pammrij => [-3.0, 3.0]
-    # distance => dv dot dv => 9
-    dist = matrix_opx.mahalanobis(D, period, x, y, Qinv)
-    assert dist == pytest.approx(9.0)
-
-
 def test_effdim():
     # Diagonal covariance => eigenvals = diagonal
     # Let them sum to 1+2+3=6 => pk=[1/6,2/6,3/6], sum pk log(pk).

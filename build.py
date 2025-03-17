@@ -80,7 +80,7 @@ def create_extensions():
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
         Extension(
-            "pypamm.lib",
+            "pypamm.lib._opx",
             ["src/pypamm/lib/_opx.pyx"],
             include_dirs=[np.get_include()],
             extra_compile_args=extra_compile_args,

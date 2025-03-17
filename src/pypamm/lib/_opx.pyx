@@ -14,7 +14,7 @@ ctypedef cnp.float64_t DTYPE_t
 ctypedef cnp.int64_t ITYPE_t
 
 ########## invmatrix ##########
-def invmatrix(int D, double[:, ::1] M):
+cpdef object invmatrix(int D, double[:, ::1] M):
     """
     Fortran SUBROUTINE invmatrix(D,M,IM)
     Here we just return the inverted matrix as a new NumPy array.
@@ -24,7 +24,7 @@ def invmatrix(int D, double[:, ::1] M):
     return IM
 
 ########## trmatrix ##########
-def trmatrix(int D, double[:, ::1] M):
+cpdef double trmatrix(int D, double[:, ::1] M):
     """
     Fortran FUNCTION trmatrix(D,M)
     Return the trace of a square matrix.
@@ -32,7 +32,7 @@ def trmatrix(int D, double[:, ::1] M):
     return np.trace(M)
 
 ########## detmatrix ##########
-def detmatrix(int D, double[:, ::1] M):
+cpdef double detmatrix(int D, double[:, ::1] M):
     """
     Fortran FUNCTION detmatrix(D,M)
     Return the determinant of a square matrix.
@@ -40,7 +40,7 @@ def detmatrix(int D, double[:, ::1] M):
     return np.linalg.det(M)
 
 ########## logdet ##########
-def logdet(int D, double[:, ::1] M):
+cpdef double logdet(int D, double[:, ::1] M):
     """
     Fortran FUNCTION logdet(D,M)
     Return the log determinant of a square matrix.
@@ -52,7 +52,7 @@ def logdet(int D, double[:, ::1] M):
     return ld
 
 ########## variance ##########
-def variance(int nsamples, int D, double[:, ::1] x, double[::1] weights):
+cpdef double variance(int nsamples, int D, double[:, ::1] x, double[::1] weights):
     """
     Fortran FUNCTION variance(nsamples,D,x,weights).
     Weighted variance calculation.
@@ -112,7 +112,7 @@ def variance(int nsamples, int D, double[:, ::1] x, double[::1] weights):
     return varval
 
 ########## eigval ##########
-def eigval(int D, double[:, ::1] AB):
+cpdef object eigval(int D, double[:, ::1] AB):
     """
     Fortran SUBROUTINE eigval(AB,D,WR)
     In Python, we just return the eigenvalues of AB as a NumPy array.
@@ -121,7 +121,7 @@ def eigval(int D, double[:, ::1] AB):
     return WR
 
 ########## maxeigval ##########
-def maxeigval(int D, double[:, ::1] AB):
+cpdef double maxeigval(int D, double[:, ::1] AB):
     """
     Fortran FUNCTION maxeigval(AB,D).
     Return the max real eigenvalue.
@@ -130,14 +130,14 @@ def maxeigval(int D, double[:, ::1] AB):
     return vals.max()
 
 ########## factorial ##########
-def factorial(int n):
+cpdef int factorial(int n):
     """
     Fortran FUNCTION factorial(n).
     """
     return py_factorial(n)
 
 ########## pammrij ##########
-def pammrij(int D,
+cpdef object pammrij(int D,
             double[::1] period,
             double[::1] ri,
             double[::1] rj):
@@ -160,7 +160,7 @@ def pammrij(int D,
     return rij
 
 ########## mahalanobis ##########
-def mahalanobis(int D,
+cpdef double mahalanobis(int D,
                 double[::1] period,
                 double[::1] x,
                 double[::1] y,
@@ -185,7 +185,7 @@ def mahalanobis(int D,
     return dist
 
 ########## effdim ##########
-def effdim(int D, double[:, ::1] Q):
+cpdef double effdim(int D, double[:, ::1] Q):
     """
     Fortran FUNCTION effdim(D,Q).
     Uses the eigenvalue-based formula with pk * log(pk).
@@ -206,7 +206,7 @@ def effdim(int D, double[:, ::1] Q):
     return np.exp(-sum_plogp)
 
 ########## oracle ##########
-def oracle(int D, double N, double[:, ::1] Q):
+cpdef object oracle(int D, double N, double[:, ::1] Q):
     """
     Fortran SUBROUTINE oracle(D,N,Q).
     Applies a shrinkage transform in-place on Q.
@@ -256,4 +256,4 @@ def oracle(int D, double N, double[:, ::1] Q):
                 Q[i, j] = alpha * Q[i, j]
 
     # No return — modifies Q in place, as a Fortran SUBROUTINE would.
-    return
+    return None

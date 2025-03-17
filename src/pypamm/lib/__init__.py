@@ -2,7 +2,7 @@
 Optimized operations library for PyPAMM.
 """
 
-from pypamm.lib import (
+from pypamm.lib._opx import (
     detmatrix,
     effdim,
     eigval,
