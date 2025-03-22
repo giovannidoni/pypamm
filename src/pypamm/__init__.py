@@ -32,4 +32,4 @@ from pypamm.grid_selection import select_grid_points
 from pypamm.mst_wrapper import build_mst
 from pypamm.neighbor_graph import build_neighbor_graph
 from pypamm.neighbor_graph_wrapper import build_knn_graph
-from pypamm.quick_shift_wrapper import quick_shift, quick_shift_kde
+from pypamm.quick_shift_wrapper import quick_shift_kde
