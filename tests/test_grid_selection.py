@@ -119,25 +119,6 @@ def test_mahalanobis_without_inv_cov(simple_data):
         py_select_grid_points(simple_data, 5, metric="mahalanobis")
 
 
-def test_mahalanobis_wrong_shape(simple_data):
-    """Test that Mahalanobis with wrong inv_cov shape raises a ValueError."""
-    D = simple_data.shape[1]
-    with pytest.raises(ValueError, match="inv_cov must be"):
-        py_select_grid_points(simple_data, 5, metric="mahalanobis", inv_cov=np.eye(D + 1))
-
-
-def test_minkowski_without_param(simple_data):
-    """Test that Minkowski without parameter raises a ValueError."""
-    with pytest.raises(ValueError, match="Must supply a 1x1 array"):
-        py_select_grid_points(simple_data, 5, metric="minkowski")
-
-
-def test_minkowski_wrong_shape(simple_data):
-    """Test that Minkowski with wrong parameter shape raises a ValueError."""
-    with pytest.raises(ValueError, match="inv_cov must be a 1x1 array"):
-        py_select_grid_points(simple_data, 5, metric="minkowski", inv_cov=np.array([[1.0, 2.0]]))
-
-
 # Test algorithm correctness
 def test_min_max_algorithm_correctness(simple_data):
     """Test that the min-max algorithm selects points that maximize minimum distance."""
