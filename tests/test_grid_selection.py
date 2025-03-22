@@ -397,3 +397,47 @@ def test_numerical_stability():
         # Basic shape checks
         assert idxgrid.shape == (3,)
         assert Y.shape == (3, 2)
+
+
+# def test_voronoi_basic(simple_2d_data):
+#     X, Y, wj, idxgrid = simple_2d_data
+#     iminij, ni, wi, ineigh = compute_voronoi(X, wj, Y, idxgrid, metric="euclidean")
+
+#     assert iminij.shape == (X.shape[0],)
+#     assert ni.shape == (Y.shape[0],)
+#     assert wi.shape == (Y.shape[0],)
+#     assert ineigh.shape == (Y.shape[0],)
+#     assert np.sum(ni) == X.shape[0]
+#     np.testing.assert_allclose(np.sum(wi), np.sum(wj))
+
+
+# def test_voronoi_single_grid_point(random_2d_data):
+#     X, wj = random_2d_data
+#     Y = np.array([[0.5, 0.5]], dtype=np.float64)
+#     idxgrid = np.array([0], dtype=np.int32)
+
+#     iminij, ni, wi, ineigh = compute_voronoi(X, wj, Y, idxgrid, metric="euclidean")
+
+#     assert np.all(iminij == 0)
+#     assert ni[0] == X.shape[0]
+#     assert np.isclose(wi[0], np.sum(wj))
+
+
+# def test_voronoi_zero_weights(random_2d_data):
+#     X, _ = random_2d_data
+#     wj = np.zeros(X.shape[0], dtype=np.float64)
+#     Y = np.array([[0.0, 0.0], [1.0, 1.0]])
+#     idxgrid = np.array([0, 1], dtype=np.int32)
+
+#     iminij, ni, wi, ineigh = compute_voronoi(X, wj, Y, idxgrid, metric="euclidean")
+
+#     assert np.sum(ni) == X.shape[0]
+#     assert np.allclose(wi, 0.0)
+#     assert ineigh.shape == (Y.shape[0],)
+
+
+# def test_voronoi_invalid_metric(simple_2d_data):
+#     X, Y, wj, idxgrid = simple_2d_data
+
+#     with pytest.raises(ValueError, match="Unsupported metric"):
+#         compute_voronoi(X, wj, Y, idxgrid, metric="banana")
