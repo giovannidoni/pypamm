@@ -49,7 +49,7 @@ def test_vanilla_quick_shift(random_data):
 def test_kde_quick_shift_adaptive(random_data):
     """Test the KDE-enhanced QuickShift implementation with adaptive bandwidth."""
     # Run KDE-enhanced QuickShift with adaptive bandwidth (default)
-    labels = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, adaptive=True)
+    labels, _ = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, adaptive=True)
 
     # Check that labels have the expected shape
     assert labels.shape == (len(random_data),)
@@ -62,7 +62,7 @@ def test_kde_quick_shift_adaptive(random_data):
 def test_kde_quick_shift_fixed(random_data):
     """Test the KDE-enhanced QuickShift implementation with fixed bandwidth."""
     # Run KDE-enhanced QuickShift with fixed bandwidth
-    labels = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, adaptive=False)
+    labels, _ = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, adaptive=False)
 
     # Check that labels have the expected shape
     assert labels.shape == (len(random_data),)
@@ -77,10 +77,10 @@ def test_compare_adaptive_vs_fixed(simple_data):
     # Use simple_data instead of bimodal_data for faster tests
 
     # Run KDE-enhanced QuickShift with adaptive bandwidth
-    labels_adaptive = quick_shift_kde(simple_data, bandwidth=0.1, ngrid=10, adaptive=True)
+    labels_adaptive, _ = quick_shift_kde(simple_data, bandwidth=0.1, ngrid=10, adaptive=True)
 
     # Run KDE-enhanced QuickShift with fixed bandwidth
-    labels_fixed = quick_shift_kde(simple_data, bandwidth=0.1, ngrid=10, adaptive=False)
+    labels_fixed, _ = quick_shift_kde(simple_data, bandwidth=0.1, ngrid=10, adaptive=False)
 
     # The results should be different due to different bandwidth handling
     # Check that the number of clusters is different
@@ -105,7 +105,7 @@ def test_compare_implementations(simple_data):
     labels_vanilla = quick_shift(simple_data, prob, ngrid=10)
 
     # Run KDE-enhanced QuickShift with fixed bandwidth to match
-    labels_kde = quick_shift_kde(simple_data, bandwidth=0.1, ngrid=10, adaptive=False)
+    labels_kde, _ = quick_shift_kde(simple_data, bandwidth=0.1, ngrid=10, adaptive=False)
 
     # Print the number of clusters for debugging
     n_clusters_vanilla = len(np.unique(labels_vanilla))
@@ -130,8 +130,8 @@ def test_max_dist_parameter(random_data):
     assert n_clusters_small >= n_clusters_large
 
     # Run KDE-enhanced QuickShift with different max_dist values
-    labels_kde_small = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, max_dist=0.1)
-    labels_kde_large = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, max_dist=2.0)
+    labels_kde_small, _ = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, max_dist=0.1)
+    labels_kde_large, _ = quick_shift_kde(random_data, bandwidth=0.1, ngrid=10, max_dist=2.0)
 
     # With a smaller max_dist, we expect more clusters
     n_clusters_kde_small = len(np.unique(labels_kde_small))
@@ -164,7 +164,7 @@ def test_lambda_parameter(random_data):
     assert labels_large_lambda.shape == (len(random_data),)
 
     # Run KDE-enhanced QuickShift with different lambda values
-    labels_kde_small_lambda = quick_shift_kde(
+    labels_kde_small_lambda, _ = quick_shift_kde(
         random_data,
         bandwidth=0.1,
         ngrid=10,
@@ -172,7 +172,7 @@ def test_lambda_parameter(random_data):
         lambda_qs=0.5,
     )
 
-    labels_kde_large_lambda = quick_shift_kde(
+    labels_kde_large_lambda, _ = quick_shift_kde(
         random_data,
         bandwidth=0.1,
         ngrid=10,
@@ -192,14 +192,14 @@ def test_adaptive_parameter_effect(simple_data):
     bandwidth = 0.1
 
     # Run with adaptive bandwidth
-    labels_adaptive = quick_shift_kde(simple_data, bandwidth=bandwidth, ngrid=10, adaptive=True)
+    labels_adaptive, _ = quick_shift_kde(simple_data, bandwidth=bandwidth, ngrid=10, adaptive=True)
 
     # Run with fixed bandwidth
-    labels_fixed = quick_shift_kde(simple_data, bandwidth=bandwidth, ngrid=10, adaptive=False)
+    labels_fixed, _ = quick_shift_kde(simple_data, bandwidth=bandwidth, ngrid=10, adaptive=False)
 
     # Check that both produce valid clusterings
-    assert labels_adaptive.shape == (len(simple_data),)
-    assert labels_fixed.shape == (len(simple_data),)
+    assert labels_adaptive.shape[0] == len(simple_data)
+    assert labels_fixed.shape[0] == len(simple_data)
 
     # Check that all points have valid cluster assignments
     assert np.all(labels_adaptive >= 0)

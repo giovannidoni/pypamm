@@ -26,7 +26,7 @@ def select_grid_points(
     from pypamm.grid_selection import select_grid_points as _select_grid_points
 
     # Convert X to float64 if needed
-    X = np.asarray(X, dtype=np.float64)
+    X = np.ascontiguousarray(X.astype(np.float64))
 
     # Call the Cython implementation
     return _select_grid_points(X, ngrid, metric, inv_cov)

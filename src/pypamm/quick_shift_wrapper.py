@@ -20,10 +20,8 @@ def quick_shift(
 ) -> NDArray[np.int32]:
     """
     Quick-Shift clustering algorithm based on density gradient ascent.
-
     This implementation can work with either pairwise distances or a pre-computed
     neighbor graph, automatically choosing the most efficient approach.
-
     Parameters:
     ----------
     X : array-like, shape (n_samples, n_features)
@@ -43,7 +41,6 @@ def quick_shift(
     neighbor_graph : scipy.sparse matrix, optional
         Pre-computed neighbor graph. If provided, this will be used instead of computing
         distances between all points, which is more efficient for large datasets.
-
     Returns:
     -------
     labels : ndarray of shape (n_samples,)
@@ -188,4 +185,4 @@ def quick_shift_kde(
         prob = compute_kde(X, X, constant_bandwidth=bandwidth, adaptive=False)
 
     # Call the unified quick_shift with pre-computed probabilities
-    return quick_shift(X, prob, ngrid, metric, lambda_qs, max_dist, neighbor_graph)
+    return _quick_shift_clustering(X, prob, ngrid, neighbor_graph, metric, lambda_qs, max_dist)
