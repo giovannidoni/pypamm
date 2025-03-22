@@ -21,10 +21,10 @@ from pypamm.distance_metrics import get_distance_function
 # Min-Max selection with flexible metrics
 # ------------------------------------------------------------------------------
 cpdef object select_grid_points(
-    object X,  # np.ndarray[np.float64_t, ndim=2]
+    double[:, :] X,
     int ngrid,
     str metric = "euclidean",
-    object inv_cov = None  # np.ndarray[np.float64_t, ndim=2]
+    object inv_cov = None
 ):
     """
     Select 'ngrid' points from X (N x D) by the min–max algorithm, using one
@@ -40,8 +40,8 @@ cpdef object select_grid_points(
       - idxgrid: indices of chosen points (shape = [ngrid])
       - Y: coordinates of chosen points (shape = [ngrid, D])
     """
-    # Type the arrays inside the function
-    cdef np.ndarray[np.float64_t, ndim=2] X_arr = X
+    # Create a C-contiguous copy of X to ensure consistent memory access
+    cdef np.ndarray[np.float64_t, ndim=2] X_arr = np.ascontiguousarray(X)
 
     cdef Py_ssize_t N = X_arr.shape[0]
     cdef Py_ssize_t D = X_arr.shape[1]
