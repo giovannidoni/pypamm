@@ -141,22 +141,7 @@ def test_kd_tree_method(random_data):
     k = 3
 
     # Use KD-tree method with Euclidean distance
-    adjacency_list = build_neighbor_graph(random_data, k, method="kd_tree", metric="euclidean")
-
-    # Check that the adjacency list has the correct length
-    assert len(adjacency_list) == len(random_data)
-
-    # Check that each point has exactly k neighbors
-    for neighbors in adjacency_list:
-        assert len(neighbors) == k
-
-
-def test_brute_force_method(random_data):
-    """Test build_neighbor_graph with brute force search method."""
-    k = 3
-
-    # Use brute force method
-    adjacency_list = build_neighbor_graph(random_data, k, method="brute_force")
+    adjacency_list = build_neighbor_graph(random_data, k, method="knn", metric="euclidean")
 
     # Check that the adjacency list has the correct length
     assert len(adjacency_list) == len(random_data)

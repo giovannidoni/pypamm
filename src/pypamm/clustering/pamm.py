@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike, NDArray
 from pypamm.clustering.adjacency import compute_adjacency, merge
 from pypamm.clustering.cluster_utils_wrapper import reindex_clusters
 from pypamm.density.kde import compute_kde
-from pypamm.distance_metrics import get_distance_function
+from pypamm.distance_metrics import py_calculate_distance
 from pypamm.grid_selection import select_grid_points
 from pypamm.neighbor_graph import build_neighbor_graph
 from pypamm.quick_shift_wrapper import quick_shift
@@ -212,9 +212,6 @@ class PAMMCluster:
         unique_clusters = np.unique(self.cluster_labels_)
         cluster_kde_means = np.array([np.mean(self.kde_density_[self.cluster_labels_ == c]) for c in unique_clusters])
 
-        # Get the appropriate distance function
-        dist_func = get_distance_function(self.metric)
-
         # Assign new points based on KDE-weighted distances
         labels = np.zeros(N_new, dtype=np.int32)
         probabilities = np.zeros(N_new, dtype=np.float64)
@@ -229,7 +226,7 @@ class PAMMCluster:
                 kde_ratio = self.kde_density_.mean() / (cluster_kde_means[j] + 1e-6)
 
                 # Compute KDE-weighted distance
-                weighted_dist = dist_func(X_new[i], self.cluster_centers_[j], self.bandwidth) * kde_ratio
+                weighted_dist = py_calculate_distance("euclidian", X_new[i], self.cluster_centers_[j]) * kde_ratio
 
                 # Assign to closest cluster
                 if weighted_dist < min_dist:

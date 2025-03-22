@@ -4,13 +4,20 @@
 import numpy as np
 cimport numpy as np
 
-# Import the distance function type from distance_metrics
-from pypamm.distance_metrics cimport dist_func_t
-
-# Declare the select_grid_points function
 cpdef object select_grid_points(
-    object X,
+    double[:, :] X,
     int ngrid,
     str metric = *,
-    object inv_cov = *
+    object inv_cov = *,
+    double k = *
+)
+
+cpdef tuple compute_voronoi(
+    double[:, :] X,
+    double[:] wj,
+    double[:, :] Y,
+    int[:] idxgrid,
+    str metric = *,
+    object inv_cov = *,
+    double k = *
 )

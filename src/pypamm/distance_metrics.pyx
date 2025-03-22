@@ -6,16 +6,12 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport fabs, sqrt, pow
 
-# Import the function pointer type from the .pxd file
-from pypamm.distance_metrics cimport dist_func_t
-
 # ------------------------------------------------------------------------------
 # 1) Distances that ignore the third parameter
 # ------------------------------------------------------------------------------
 cdef double dist_euclidean(
-    double[::1] a,
-    double[::1] b,
-    double[:, ::1] unused
+    double[:] a,
+    double[:] b,
 ) except? -1 nogil:
     """
     Squared Euclidean distance: sum_i (a[i] - b[i])^2
@@ -31,9 +27,8 @@ cdef double dist_euclidean(
 
 
 cdef double dist_manhattan(
-    double[::1] a,
-    double[::1] b,
-    double[:, ::1] unused
+    double[:] a,
+    double[:] b,
 ) except? -1 nogil:
     """
     Manhattan (L1) distance = sum_i |a[i] - b[i]|.
@@ -47,9 +42,8 @@ cdef double dist_manhattan(
 
 
 cdef double dist_chebyshev(
-    double[::1] a,
-    double[::1] b,
-    double[:, ::1] unused
+    double[:] a,
+    double[:] b,
 ) except? -1 nogil:
     """
     Chebyshev (L∞) distance = max_i |a[i] - b[i]|.
@@ -64,9 +58,8 @@ cdef double dist_chebyshev(
 
 
 cdef double dist_cosine(
-    double[::1] a,
-    double[::1] b,
-    double[:, ::1] unused
+    double[:] a,
+    double[:] b,
 ) except? -1 nogil:
     """
     Cosine distance = 1 - (a·b)/(||a|| * ||b||).
@@ -91,9 +84,9 @@ cdef double dist_cosine(
 # 2) Distances that USE the third parameter
 # ------------------------------------------------------------------------------
 cdef double dist_mahalanobis(
-    double[::1] a,
-    double[::1] b,
-    double[:, ::1] inv_cov
+    double[:] a,
+    double[:] b,
+    double[:, :] inv_cov
 ) except? -1 nogil:
     """
     Squared Mahalanobis distance = (a - b)^T inv_cov (a - b).
@@ -110,92 +103,46 @@ cdef double dist_mahalanobis(
 
 
 cdef double dist_minkowski(
-    double[::1] a,
-    double[::1] b,
-    double[:, ::1] param
+    double[:] a,
+    double[:] b,
+    double k
 ) except? -1 nogil:
     """
-    Minkowski distance with exponent k = param[0, 0].
+    Minkowski distance with exponent k.
     L_k(a, b) = ( sum_i |a[i] - b[i]|^k )^(1/k)
     """
     cdef Py_ssize_t i, D = a.shape[0]
-    cdef double k = param[0, 0]
     cdef double diff, accum = 0.0
     for i in range(D):
         diff = fabs(a[i] - b[i])
         accum += pow(diff, k)
     return pow(accum, 1.0 / k)
 
-# Function to select the appropriate distance function
-def get_distance_function(str metric, object inv_cov=None, int D=0):
-    """
-    Select the appropriate distance function based on the metric.
+# Internal function to calculate distance given the metric
+cdef double calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = None, double k = 2.0) except *:
+    # For metrics that don't require additional parameters
+    cdef double[:, :] inv_cov_view
 
-    Parameters:
-    - metric: String specifying the distance metric
-    - inv_cov: Optional parameter for Mahalanobis and Minkowski distances
-    - D: Dimensionality of the data (needed for validation)
-
-    Returns:
-    - dist_func: A Python wrapper function for the selected distance function
-    - inv_cov_arr: The processed inv_cov parameter (or a dummy if not needed)
-    """
-    cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
-
-    # Select appropriate distance function
     if metric == "euclidean":
-        def dist_func_wrapper(a, b, inv_cov_param):
-            return dist_euclidean(a, b, inv_cov_param)
+        return dist_euclidean(a, b)
     elif metric == "manhattan":
-        def dist_func_wrapper(a, b, inv_cov_param):
-            return dist_manhattan(a, b, inv_cov_param)
+        return dist_manhattan(a, b)
     elif metric == "chebyshev":
-        def dist_func_wrapper(a, b, inv_cov_param):
-            return dist_chebyshev(a, b, inv_cov_param)
+        return dist_chebyshev(a, b)
     elif metric == "cosine":
-        def dist_func_wrapper(a, b, inv_cov_param):
-            return dist_cosine(a, b, inv_cov_param)
+        return dist_cosine(a, b)
+    # For metrics that require additional parameters
     elif metric == "mahalanobis":
         if inv_cov is None:
             raise ValueError("Must supply inv_cov (D x D) for Mahalanobis.")
-        inv_cov_arr = inv_cov
-        if D > 0 and (inv_cov_arr.shape[0] != D or inv_cov_arr.shape[1] != D):
-            raise ValueError(f"inv_cov must be ({D},{D}) for Mahalanobis.")
-        def dist_func_wrapper(a, b, inv_cov_param):
-            return dist_mahalanobis(a, b, inv_cov_param)
+        # We need to convert inv_cov to the proper type
+        inv_cov_view = inv_cov
+        return dist_mahalanobis(a, b, inv_cov_view)
     elif metric == "minkowski":
-        if inv_cov is None:
-            raise ValueError("Must supply a 1x1 array with exponent for Minkowski.")
-        inv_cov_arr = inv_cov
-        if inv_cov_arr.shape[0] != 1 or inv_cov_arr.shape[1] != 1:
-            raise ValueError("For Minkowski distance, inv_cov must be a 1x1 array with param[0,0] = k.")
-        def dist_func_wrapper(a, b, inv_cov_param):
-            return dist_minkowski(a, b, inv_cov_param)
+        return dist_minkowski(a, b, k)
     else:
         raise ValueError(f"Unsupported metric '{metric}'")
 
-    # Create a dummy parameter for metrics that don't use inv_cov
-    if inv_cov is None:
-        inv_cov_arr = np.zeros((1, 1), dtype=np.float64)
-        if metric == "minkowski":
-            # Default to Euclidean distance (p=2) if not specified
-            inv_cov_arr[0, 0] = 2.0
-
-    return dist_func_wrapper, inv_cov_arr
-
-# Internal function to get the actual distance function (for Cython use only)
-cdef dist_func_t _get_distance_function(str metric) except *:
-    if metric == "euclidean":
-        return dist_euclidean
-    elif metric == "manhattan":
-        return dist_manhattan
-    elif metric == "chebyshev":
-        return dist_chebyshev
-    elif metric == "cosine":
-        return dist_cosine
-    elif metric == "mahalanobis":
-        return dist_mahalanobis
-    elif metric == "minkowski":
-        return dist_minkowski
-    else:
-        raise ValueError(f"Unsupported metric '{metric}'")
+cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = None, double k = 2.0) except *:
+    # For metrics that don't require additional parameters
+    return calculate_distance(metric, a, b, inv_cov, k)

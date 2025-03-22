@@ -2,7 +2,6 @@
 
 import numpy as np
 cimport numpy as np
-from pypamm.distance_metrics cimport dist_func_t
 
 # Helper functions for Union-Find
 cdef int find_root(int v, int[:] parent) except? -1 nogil

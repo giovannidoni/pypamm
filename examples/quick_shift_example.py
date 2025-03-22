@@ -20,8 +20,7 @@ from data_generator import generate_dataset, load_config, plot_clusters
 from matplotlib.gridspec import GridSpec
 from sklearn.cluster import AgglomerativeClustering
 
-from pypamm.density.kde import compute_kde
-from pypamm.quick_shift import quick_shift_clustering
+from pypamm import quick_shift_kde
 
 # Load configuration from YAML file
 config = load_config("example_config")
@@ -63,12 +62,14 @@ for i, dataset_name in enumerate(this_config["datasets"]):
             # Apply Quick-Shift clustering
             qs_config = this_config["algorithms"][algorithm_name]
 
-            # Compute KDE for density estimation
-            density = compute_kde(X, X, qs_config["bandwidth"], adaptive=True)
-
             # Apply Quick-Shift clustering
-            labels, centers = quick_shift_clustering(
-                X, density, lambda_qs=qs_config["lambda_qs"], ngrid=qs_config["ngrid"], metric=qs_config["metric"]
+            labels, centers = quick_shift_kde(
+                X,
+                qs_config["bandwidth"],
+                lambda_qs=qs_config["lambda_qs"],
+                ngrid=qs_config["ngrid"],
+                metric=qs_config["metric"],
+                adaptive=False,
             )
             n_found_clusters = len(np.unique(labels))
 

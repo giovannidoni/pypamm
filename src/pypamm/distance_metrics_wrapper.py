@@ -2,27 +2,23 @@
 Python wrapper for the distance_metrics Cython module.
 """
 
-from collections.abc import Callable
-from typing import Any
+from functools import partial
 
-import numpy as np
-from numpy.typing import NDArray
+from pypamm.distance_metrics import py_calculate_distance
 
 
-def get_distance_function(
-    metric: str = "euclidean",
-) -> Callable[[NDArray[np.float64], NDArray[np.float64], Any], float]:
+def get_distance_function(metric: str = "euclidean", inv_cov=None, k: float = 2.0) -> float:
     """
-    Get a distance function for the specified metric.
+    Deprecated function, use calculate_distance directly.
+    This function is maintained for backward compatibility only.
 
     Parameters:
     - metric: Distance metric name
+    - inv_cov: Inverse covariance matrix for Mahalanobis distance
+    - k: Parameter for Minkowski distance (p value)
 
     Returns:
-    - distance_function: A function that computes the distance between two points
+    - Calculated distance value
     """
-    # Import the Cython implementation
-    from pypamm.distance_metrics import get_distance_function as _get_distance_function
 
-    # Call the Cython implementation
-    return _get_distance_function(metric)
+    return partial(py_calculate_distance, metric=metric, inv_cov=inv_cov, k=k)
