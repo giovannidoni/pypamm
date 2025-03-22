@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def select_grid_points(
+def py_select_grid_points(
     X: NDArray[np.float64], ngrid: int, metric: str = "euclidean", inv_cov: NDArray[np.float64] | None = None
 ) -> NDArray[np.float64]:
     """
@@ -32,7 +32,7 @@ def select_grid_points(
     return _select_grid_points(X, ngrid, metric, inv_cov)
 
 
-def compute_voronoi(
+def py_compute_voronoi(
     X: NDArray[np.float64],
     wj: NDArray[np.float64],
     Y: NDArray[np.float64],
@@ -55,7 +55,7 @@ def compute_voronoi(
     - wi: Sum of weights per Voronoi cell (ngrid,)
     - ineigh: Closest sample index to each grid point (ngrid,)
     """
-    from pypamm.voronoi import compute_voronoi as _compute_voronoi
+    from pypamm.grid_selection import compute_voronoi as _compute_voronoi
 
     X = np.ascontiguousarray(X, dtype=np.float64)
     wj = np.ascontiguousarray(wj, dtype=np.float64)
