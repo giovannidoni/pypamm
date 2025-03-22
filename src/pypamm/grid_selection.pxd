@@ -5,7 +5,7 @@ import numpy as np
 cimport numpy as np
 
 cpdef object select_grid_points(
-    double[::1, :] X,
+    double[:, :] X,
     int ngrid,
     str metric = *,
     object inv_cov = *,
@@ -13,10 +13,10 @@ cpdef object select_grid_points(
 )
 
 cpdef tuple compute_voronoi(
-    double[::1, :] X,
-    double[::1] wj,
-    double[::1, :] Y,
-    int[::1] idxgrid,
+    double[:, :] X,
+    double[:] wj,
+    double[:, :] Y,
+    int[:] idxgrid,
     str metric = *,
     object inv_cov = *,
     double k = *
