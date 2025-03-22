@@ -8,6 +8,8 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_matrix
 
+from pypamm.distance_metrics import py_calculate_distance
+
 
 def build_knn_graph(
     X: ArrayLike,
@@ -76,8 +78,8 @@ def build_neighbor_graph(
     k: int,
     inv_cov: NDArray[np.float64] | None = None,
     metric: str = "euclidean",
-    method: Literal["brute_force", "kd_tree"] = "brute_force",
-    graph_type: Literal["gabriel", "knn", "relative_neighborhood"] = "gabriel",
+    method: Literal["knn", "gabriel"] = "knn",
+    graph_type: Literal["connectivity", "distance"] = "distance",
 ) -> csr_matrix:
     """
     Build a neighbor graph.
@@ -138,24 +140,7 @@ def build_neighbor_graph(
             neighbors = []
             for j in range(N):
                 if i != j:  # Skip self
-                    # Compute distance directly
-                    if metric == "euclidean":
-                        dist = np.sqrt(np.sum((X[i] - X[j]) ** 2))
-                    elif metric == "manhattan":
-                        dist = np.sum(np.abs(X[i] - X[j]))
-                    elif metric == "chebyshev":
-                        dist = np.max(np.abs(X[i] - X[j]))
-                    elif metric == "cosine":
-                        dist = 1.0 - np.dot(X[i], X[j]) / (np.linalg.norm(X[i]) * np.linalg.norm(X[j]))
-                    elif metric == "mahalanobis":
-                        diff = X[i] - X[j]
-                        dist = np.sqrt(diff.dot(inv_cov).dot(diff))
-                    elif metric == "minkowski":
-                        p = inv_cov[0, 0]
-                        dist = np.power(np.sum(np.power(np.abs(X[i] - X[j]), p)), 1 / p)
-                    else:
-                        dist = np.sqrt(np.sum((X[i] - X[j]) ** 2))  # Default to Euclidean
-
+                    dist = py_calculate_distance(metric, X[i], X[j], inv_cov, k)
                     neighbors.append((j, dist))
 
             # Sort by distance and take the k closest

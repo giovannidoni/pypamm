@@ -41,3 +41,6 @@ cdef double dist_minkowski(
 
 # Declare the internal function to get a distance function
 cdef double calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = *, double k = *) except *
+
+# Declare the internal function to get a distance function callable in python
+cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = *, double k = *) except *

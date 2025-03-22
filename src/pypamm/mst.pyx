@@ -4,9 +4,7 @@
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
-from pypamm.distance_metrics cimport (
-    dist_func_t, _get_distance_function
-)
+from pypamm.distance_metrics cimport calculate_distance
 
 # Helper functions for Union-Find
 cdef int find_root(int v, int[:] parent) except? -1 nogil:
@@ -50,30 +48,27 @@ cpdef np.ndarray[np.float64_t, ndim=2] build_mst(np.ndarray[np.float64_t, ndim=2
     cdef np.ndarray[np.int32_t, ndim=1] parent = np.arange(N, dtype=np.int32)
     cdef int[:] parent_view = parent
 
-    # Get the distance function
-    cdef dist_func_t dist_func = _get_distance_function(metric)
-
     # Compute pairwise distances
     for i in range(N):
         for j in range(i + 1, N):
-            distances[i, j] = dist_func(X[i], X[j], np.zeros((1,1)))
+            distances[i, j] = calculate_distance(metric, X[i], X[j])
             distances[j, i] = distances[i, j]
             edges.append((distances[i, j], i, j))
 
-    # Sort edges by distance (needed for Kruskal's Algorithm)
+    # Sort edges by weight
     edges.sort()
 
-    # Construct MST using Kruskal's Algorithm
+    # Build MST using Kruskal's Algorithm
     cdef list mst_edges = []
-    cdef double dist
-    cdef int root_i, root_j
-    for dist, i, j in edges:
-        root_i = find_root(i, parent_view)
-        root_j = find_root(j, parent_view)
-        if root_i != root_j:
-            union_sets(i, j, parent_view)
-            mst_edges.append((i, j, dist))
-            if len(mst_edges) == N - 1:
-                break  # MST complete
+    cdef double weight
+    cdef int u, v
 
-    return np.array(mst_edges, dtype=np.float64)
+    for edge in edges:
+        weight, u, v = edge
+        if find_root(u, parent_view) != find_root(v, parent_view):
+            union_sets(u, v, parent_view)
+            mst_edges.append((u, v, weight))
+
+    # Convert to numpy array
+    cdef np.ndarray[np.float64_t, ndim=2] mst_edges_array = np.array(mst_edges, dtype=np.float64)
+    return mst_edges_array

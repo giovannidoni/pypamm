@@ -8,7 +8,6 @@ cimport numpy as np
 from pypamm.distance_metrics cimport (
     calculate_distance
 )
-from pypamm.distance_metrics import get_distance_function
 from libc.math cimport HUGE_VAL
 
 # ------------------------------------------------------------------------------

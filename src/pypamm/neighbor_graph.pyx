@@ -1,6 +1,11 @@
 # cython: language_level=3, boundscheck=False, wraparound=False
 # distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
+"""
+Cython implementation of neighbor graph construction
+This module supports building k-nearest neighbor (KNN) and Gabriel graphs
+"""
+
 import numpy as np
 cimport numpy as np
 from libc.math cimport sqrt, fabs, pow
@@ -11,16 +16,8 @@ from libc.stdlib cimport malloc, free
 
 # Import distance functions from the distance_metrics module
 from pypamm.distance_metrics cimport (
-    dist_func_t,
-    dist_euclidean,
-    dist_manhattan,
-    dist_chebyshev,
-    dist_cosine,
-    dist_mahalanobis,
-    dist_minkowski,
-    _get_distance_function
+    calculate_distance
 )
-from pypamm.distance_metrics import get_distance_function
 
 # Define a structure to hold a neighbor and its distance
 ctypedef struct neighbor_t:
@@ -32,73 +29,43 @@ ctypedef struct neighbor_t:
 __all__ = ['build_neighbor_graph', 'build_knn_graph', 'compute_knn_for_point']
 
 # Function to build a k-nearest neighbor graph
-cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric,
-                   object inv_cov, bint include_self, int n_jobs):
+cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric="euclidean",
+                     object inv_cov=None, bint include_self=False, int n_jobs=-1):
     """
-    Build a k-nearest neighbor graph.
+    Build a k-nearest neighbors (KNN) graph.
 
     Parameters:
     - X: Data matrix (N x D)
     - k: Number of neighbors
-    - metric: Distance metric to use
-    - inv_cov: Optional parameter for certain distance metrics
-    - include_self: Whether to include self as a neighbor
+    - metric: Distance metric for neighbor calculation
+    - inv_cov: Optional inverse covariance matrix for Mahalanobis distance
+    - include_self: Whether to include self loops
     - n_jobs: Number of parallel jobs
 
     Returns:
-    - indices: Indices of k nearest neighbors for each point (N x k)
-    - distances: Distances to k nearest neighbors for each point (N x k)
+    - indices: Indices of neighbors for each point (N x k)
+    - distances: Distances to neighbors for each point (N x k)
     """
-    # Validate inputs
-    cdef int N = X.shape[0]
-    cdef int D = X.shape[1]
+    cdef Py_ssize_t n = X.shape[0]
+    cdef Py_ssize_t i, j
+    cdef np.ndarray[np.int32_t, ndim=2] indices = np.zeros((n, k), dtype=np.int32)
+    cdef np.ndarray[np.float64_t, ndim=2] distances = np.zeros((n, k), dtype=np.float64)
 
-    if N == 0:
-        raise ValueError("Input data cannot be empty")
-
-    if k <= 0:
-        raise ValueError(f"k must be positive, got {k}")
-
-    if k >= N:
-        raise ValueError(f"k ({k}) must be less than the number of data points ({N})")
-
-    cdef int effective_k = k
-    cdef int i
-
-    if include_self:
-        effective_k = k
-    else:
-        effective_k = k + 1  # We'll compute k+1 neighbors and exclude self
-
-    # Process inv_cov
+    # Prepare inverse covariance matrix view for distance calculation
     cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
-    if inv_cov is None:
-        if metric == "mahalanobis":
-            raise ValueError("Must supply inv_cov (D x D) for Mahalanobis.")
-        elif metric == "minkowski":
-            # Default to Euclidean distance (p=2) if not specified
-            inv_cov_arr = np.zeros((1, 1), dtype=np.float64)
-            inv_cov_arr[0, 0] = 2.0
-        else:
-            inv_cov_arr = np.zeros((1, 1), dtype=np.float64)
+    if inv_cov is not None:
+        inv_cov_arr = np.asarray(inv_cov, dtype=np.float64)
     else:
-        inv_cov_arr = inv_cov
+        inv_cov_arr = np.zeros((1, 1), dtype=np.float64)
 
-        # Validate inv_cov dimensions
-        if metric == "mahalanobis":
-            if inv_cov_arr.shape[0] != D or inv_cov_arr.shape[1] != D:
-                raise ValueError(f"inv_cov must be ({D},{D}) for Mahalanobis.")
-        elif metric == "minkowski":
-            if inv_cov_arr.shape[0] != 1 or inv_cov_arr.shape[1] != 1:
-                raise ValueError("For Minkowski distance, inv_cov must be a 1x1 array with param[0,0] = k.")
-
-    # Allocate output arrays
-    cdef np.ndarray[np.int32_t, ndim=2] indices = np.zeros((N, k), dtype=np.int32)
-    cdef np.ndarray[np.float64_t, ndim=2] distances = np.zeros((N, k), dtype=np.float64)
-
-    # Compute k-nearest neighbors for each point - using regular for loop instead of prange
-    for i in range(N):
-        compute_knn_for_point(X, i, effective_k, indices, distances, metric, inv_cov_arr, include_self)
+    # Single-threaded implementation
+    if n_jobs == 1:
+        for i in range(n):
+            compute_knn_for_point(X, i, k, indices, distances, metric, inv_cov_arr, include_self)
+    else:
+        # TODO: Implement multi-threaded version if needed
+        for i in range(n):
+            compute_knn_for_point(X, i, k, indices, distances, metric, inv_cov_arr, include_self)
 
     return indices, distances
 
@@ -113,167 +80,152 @@ cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
 
     Parameters:
     - X: Data matrix (N x D)
-    - i: Index of the query point
+    - i: Index of the current point
     - k: Number of neighbors to find
-    - indices: Output array for neighbor indices
-    - distances: Output array for neighbor distances
-    - metric: Distance metric to use
-    - inv_cov_arr: Parameter for certain distance metrics
-    - include_self: Whether to include self as a neighbor
+    - indices: Output array for indices (N x k)
+    - distances: Output array for distances (N x k)
+    - metric: Distance metric
+    - inv_cov_arr: Inverse covariance matrix (for Mahalanobis)
+    - include_self: Whether to include self loops
     """
-    cdef int N = X.shape[0]
-    cdef int j, l, m
+    cdef Py_ssize_t n = X.shape[0]
+    cdef Py_ssize_t j, l
     cdef double dist
-    cdef neighbor_t* neighbors = <neighbor_t*>malloc(N * sizeof(neighbor_t))
-    cdef dist_func_t dist_func = _get_distance_function(metric)
-    cdef double[:, ::1] inv_cov_view = inv_cov_arr
+    cdef double[:] dists = np.full(n, np.inf, dtype=np.float64)
+    cdef int[:] inds = np.arange(n, dtype=np.int32)
+    cdef double[:, :] inv_cov_view = inv_cov_arr
 
     # Compute distances to all other points
-    for j in range(N):
-        dist = dist_func(X[i], X[j], inv_cov_view)
-        neighbors[j].idx = j
-        neighbors[j].dist = dist
+    for j in range(n):
+        if not include_self and i == j:
+            dists[j] = np.inf
+            continue
 
-    # Sort neighbors by distance (simple insertion sort)
-    cdef neighbor_t temp
-    for j in range(1, N):
-        temp = neighbors[j]
-        l = j - 1
-        while l >= 0 and neighbors[l].dist > temp.dist:
-            neighbors[l + 1] = neighbors[l]
-            l -= 1
-        neighbors[l + 1] = temp
+        dist = calculate_distance(metric, X[i], X[j], inv_cov_arr)
+        dists[j] = dist
 
-    # Copy k nearest neighbors to output arrays
-    cdef int offset = 0 if include_self else 1
-    cdef int actual_k = min(k, N - offset)
+    # Sort distances and get k-nearest
+    cdef double temp_dist
+    cdef int temp_ind
+    for j in range(n):
+        for l in range(j + 1, n):
+            if dists[j] > dists[l]:
+                # Swap distances
+                temp_dist = dists[j]
+                dists[j] = dists[l]
+                dists[l] = temp_dist
 
-    for j in range(actual_k):
-        indices[i, j] = neighbors[j + offset].idx
-        distances[i, j] = neighbors[j + offset].dist
+                # Swap indices
+                temp_ind = inds[j]
+                inds[j] = inds[l]
+                inds[l] = temp_ind
 
-    # Fill remaining slots if needed
-    for j in range(actual_k, k):
-        indices[i, j] = -1
-        distances[i, j] = -1.0
-
-    free(neighbors)
+    # Copy k nearest to output arrays
+    for j in range(k):
+        indices[i, j] = inds[j]
+        distances[i, j] = dists[j]
 
 cpdef object build_neighbor_graph(
     np.ndarray[np.float64_t, ndim=2] X,
     int k,
     object inv_cov=None,
     str metric="euclidean",
-    str method="brute_force",
-    str graph_type="gabriel"
+    str method="knn",
+    str graph_type="connectivity"
 ):
     """
-    Build a Neighbor Graph using a specified distance metric.
+    Build a neighbor graph using the specified method.
 
     Parameters:
-    - X: (N x D) NumPy array (data points)
-    - k: Number of nearest neighbors to keep
-    - inv_cov: (D x D) inverse covariance matrix for Mahalanobis distance (only needed for Mahalanobis and Minkowski)
-    - metric: "euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski"
-    - method: "brute_force" (default) or "kd_tree" for faster search
-    - graph_type: "gabriel" (default) or "knn" to compute k-nearest neighbor edges
+    - X: Data matrix (N x D)
+    - k: Number of neighbors (for KNN)
+    - inv_cov: Optional inverse covariance matrix for Mahalanobis distance
+    - metric: Distance metric to use (euclidean, manhattan, etc.)
+    - method: Method to build the graph (knn, gabriel)
+    - graph_type: Type of graph to return (connectivity, distance)
 
     Returns:
-    - adjacency_list: sparse csr_matrix where adjacency_list[i, j] contains distance value if edge exists
+    - A sparse matrix representation of the graph (CSR format)
     """
-    cdef Py_ssize_t N = X.shape[0]
-    cdef Py_ssize_t D = X.shape[1]
+    cdef Py_ssize_t n = X.shape[0]
     cdef Py_ssize_t i, j, l
-    cdef np.ndarray[np.int32_t, ndim=2] knn_indices
-    cdef np.ndarray[np.float64_t, ndim=2] distances
-    cdef list edges
-    cdef dist_func_t dist_func
+    cdef double[:, :] X_view = X
+    cdef double[:, :] inv_cov_view
+    cdef np.ndarray[np.int32_t, ndim=2] indices
+    cdef np.ndarray[np.float64_t, ndim=2] nn_distances
+    cdef list row_indices = []
+    cdef list col_indices = []
+    cdef list data = []
     cdef bint is_gabriel
-    cdef double d_ik, d_jk
-    cdef double[:, ::1] X_view = X
-    cdef double[:, ::1] inv_cov_view
+    cdef double d_ij, d_ik, d_jk
 
-    # Validate k
-    if k >= N:
-        raise ValueError(f"k ({k}) must be less than the number of data points ({N})")
-
-    distances = np.full((N, N), np.inf, dtype=np.float64)
-    edges = []  # List of (i, j, distance) tuples for sparse storage
-
-    # Get the appropriate distance function and process inv_cov
-    # Use the internal _get_distance_function directly for Cython code
-    dist_func = _get_distance_function(metric)
-
-    # Process inv_cov
-    cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
-    if inv_cov is None:
-        if metric == "mahalanobis":
-            raise ValueError("Must supply inv_cov (D x D) for Mahalanobis.")
-        elif metric == "minkowski":
-            # Default to Euclidean distance (p=2) if not specified
-            inv_cov_arr = np.zeros((1, 1), dtype=np.float64)
-            inv_cov_arr[0, 0] = 2.0
-        else:
-            inv_cov_arr = np.zeros((1, 1), dtype=np.float64)
+    if inv_cov is not None:
+        inv_cov_view = np.asarray(inv_cov, dtype=np.float64)
     else:
-        inv_cov_arr = inv_cov
+        inv_cov_view = np.zeros((1, 1), dtype=np.float64)
 
-        # Validate inv_cov dimensions
-        if metric == "mahalanobis":
-            if inv_cov_arr.shape[0] != D or inv_cov_arr.shape[1] != D:
-                raise ValueError(f"inv_cov must be ({D},{D}) for Mahalanobis.")
-        elif metric == "minkowski":
-            if inv_cov_arr.shape[0] != 1 or inv_cov_arr.shape[1] != 1:
-                raise ValueError("For Minkowski distance, inv_cov must be a 1x1 array with param[0,0] = k.")
+    # Initialize the adjacency matrix
+    cdef np.ndarray[np.float64_t, ndim=2] distances = np.zeros((n, n), dtype=np.float64)
 
-    inv_cov_view = inv_cov_arr
+    # Compute pairwise distances for the requested metric
+    for i in range(n):
+        for j in range(i, n):
+            if i == j:
+                distances[i, j] = 0.0
+            else:
+                distances[i, j] = calculate_distance(metric, X_view[i], X_view[j], inv_cov_view)
+                distances[j, i] = distances[i, j]  # Symmetric
 
-    if method == "kd_tree" and metric in ["euclidean", "manhattan"]:
-        tree = cKDTree(X)
-        for i in range(N):
-            dists, idxs = tree.query(X[i], k+1)  # k+1 to include self
-            # Skip self (first element, which has distance 0)
-            for j in range(1, k+1):
-                edges.append((i, idxs[j], dists[j]))
+    # Build the appropriate graph structure
+    if method == "knn":
+        # K-nearest neighbors graph
+        indices, nn_distances = build_knn_graph(X, k, metric, inv_cov, False, 1)
+
+        # Create the adjacency matrix from KNN indices
+        for i in range(n):
+            for j in range(k):
+                row_indices.append(i)
+                col_indices.append(indices[i, j])
+
+                if graph_type == "distance":
+                    data.append(nn_distances[i, j])
+                else:  # "connectivity"
+                    data.append(1.0)
+
+        return csr_matrix((data, (row_indices, col_indices)), shape=(n, n))
+
+    elif method == "gabriel":
+        # Gabriel graph construction
+        for i in range(n):
+            for j in range(i+1, n):
+                d_ij = distances[i, j]
+                is_gabriel = True
+
+                # Check Gabriel condition
+                for l in range(n):
+                    if l != i and l != j:
+                        d_ik = distances[i, l]
+                        d_jk = distances[j, l]
+
+                        # If any point is inside the sphere with diameter (i,j)
+                        if d_ik**2 + d_jk**2 <= d_ij**2:
+                            is_gabriel = False
+                            break
+
+                if is_gabriel:
+                    row_indices.append(i)
+                    col_indices.append(j)
+                    row_indices.append(j)
+                    col_indices.append(i)
+
+                    if graph_type == "distance":
+                        data.append(d_ij)
+                        data.append(d_ij)
+                    else:  # "connectivity"
+                        data.append(1.0)
+                        data.append(1.0)
+
+        return csr_matrix((data, (row_indices, col_indices)), shape=(n, n))
 
     else:
-        # Compute pairwise distances (without parallelism for now)
-        for i in range(N):
-            for j in range(i + 1, N):
-                distances[i, j] = dist_func(X_view[i], X_view[j], inv_cov_view)
-                distances[j, i] = distances[i, j]  # Symmetric matrix
-
-        if graph_type == "knn":
-            # Find k nearest neighbors for each point using argpartition (O(N) instead of O(N log N))
-            knn_indices = np.zeros((N, k), dtype=np.int32)
-            for i in range(N):
-                sorted_indices = np.argpartition(distances[i], k + 1)[:k + 1]
-                knn_indices[i, :] = sorted_indices[1 : k + 1]  # Exclude self
-
-            # Store k-NN edges
-            for i in range(N):
-                for j in range(k):
-                    neighbor_idx = knn_indices[i, j]
-                    edges.append((i, neighbor_idx, distances[i, neighbor_idx]))
-
-        elif graph_type == "gabriel":
-            # Construct Gabriel Graph
-            for i in range(N):
-                for j in range(i + 1, N):
-                    is_gabriel = True
-                    for l in range(N):
-                        if l != i and l != j:
-                            d_ik = distances[i, l]
-                            d_jk = distances[j, l]
-                            if d_ik < distances[i, j] and d_jk < distances[i, j]:
-                                is_gabriel = False
-                                break
-                    if is_gabriel:
-                        edges.append((i, j, distances[i, j]))
-                        edges.append((j, i, distances[i, j]))
-
-    # Convert to sparse CSR matrix
-    row_indices, col_indices, values = zip(*edges) if edges else ([], [], [])
-    adjacency_matrix = csr_matrix((values, (row_indices, col_indices)), shape=(N, N), dtype=np.float64)
-
-    return adjacency_matrix
+        raise ValueError(f"Unknown graph construction method: {method}")

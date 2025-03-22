@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pypamm.grid_selection import select_grid_points
+from pypamm.grid_selection_wrapper import select_grid_points
 
 
 # Fixtures for common test data

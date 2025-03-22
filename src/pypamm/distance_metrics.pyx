@@ -142,3 +142,7 @@ cdef double calculate_distance(str metric, double[:] a, double[:] b, object inv_
         return dist_minkowski(a, b, k)
     else:
         raise ValueError(f"Unsupported metric '{metric}'")
+
+cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = None, double k = 2.0) except *:
+    # For metrics that don't require additional parameters
+    return calculate_distance(metric, a, b, inv_cov, k)

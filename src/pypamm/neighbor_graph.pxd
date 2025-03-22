@@ -1,10 +1,9 @@
 import numpy as np
 cimport numpy as np
-from pypamm.distance_metrics cimport dist_func_t
 
 # Declare the public API
-cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric,
-                     object inv_cov, bint include_self, int n_jobs)
+cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric=*,
+                     object inv_cov=*, bint include_self=*, int n_jobs=*)
 
 cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
                          np.ndarray[np.int32_t, ndim=2] indices,

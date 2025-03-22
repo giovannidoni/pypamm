@@ -7,7 +7,7 @@ from libc.math cimport log, exp, sqrt, fabs, HUGE_VAL
 from scipy.sparse import csr_matrix
 
 # Import distance functions
-from pypamm.distance_metrics cimport dist_func_t, _get_distance_function
+from pypamm.distance_metrics cimport calculate_distance
 
 cpdef int qs_next(int ngrid, int idx, int idxn, double lambda_,
                   double[:] probnmm,
@@ -62,9 +62,6 @@ def quick_shift_clustering(
     cdef np.ndarray[np.float64_t, ndim=1] min_dist = np.full(N, np.inf, dtype=np.float64)
     cdef np.ndarray[np.int32_t, ndim=1] nearest_higher_density = np.full(N, -1, dtype=np.int32)
 
-    # Select the appropriate distance function
-    cdef dist_func_t dist_func = _get_distance_function(metric)
-
     # Create a dummy parameter for the distance function
     cdef np.ndarray[np.float64_t, ndim=2] dummy_param = np.zeros((1, 1), dtype=np.float64)
     cdef double dist_val
@@ -86,7 +83,7 @@ def quick_shift_clustering(
                 # Only consider neighbors with higher density (scaled by lambda_qs)
                 if prob[j] > prob[i] * lambda_qs:
                     point_j = X[j]
-                    dist_val = dist_func(point_i, point_j, param_view)
+                    dist_val = calculate_distance(metric, point_i, point_j)
                     if dist_val < min_dist[i] and dist_val <= max_dist:
                         min_dist[i] = dist_val
                         nearest_higher_density[i] = j
@@ -101,7 +98,7 @@ def quick_shift_clustering(
                 # Only consider points with higher density (scaled by lambda_qs)
                 if prob[j] > prob[i] * lambda_qs:
                     point_j = X[j]
-                    dist_val = dist_func(point_i, point_j, param_view)
+                    dist_val = calculate_distance(metric, point_i, point_j)
                     if dist_val < min_dist[i] and dist_val <= max_dist:
                         min_dist[i] = dist_val
                         nearest_higher_density[i] = j
