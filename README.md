@@ -27,8 +27,11 @@ The original PAMM method was developed by the Laboratory of Computational Scienc
   - **Enhanced with Graph-based Optimization**: Significantly faster for large datasets using pre-computed neighbor graphs
 - **Minimum Spanning Tree**: Constructs MSTs for efficient data representation and analysis
 - **High Performance**: Core algorithms implemented in Cython for speed
+- **Memory Efficient**: Uses typed memory views to minimize memory overhead and avoid unnecessary data copies
+- **No GIL**: Critical sections release the Python GIL for true parallel execution
 - **Multiple Distance Metrics**: Supports Euclidean, Manhattan, Chebyshev, Cosine, Mahalanobis, and Minkowski distances
 - **Flexible API**: Simple interface for integration with existing Python workflows
+- **Modern Python Support**: Fully compatible with Python 3.12 and NumPy 2.0.0
 
 ## Installation
 
@@ -84,6 +87,31 @@ poetry run python examples/pamm_clustering_example.py
 - **PAMM Clustering**: Demonstrates the complete PAMM algorithm with bootstrapping and graph-based optimization
 
 For more detailed information about the examples, see the [Examples Documentation](docs/examples.md).
+
+## Technical Details
+
+### Array Layout
+
+PyPAMM expects C-contiguous arrays (row-major order) as input. This is the default layout for NumPy arrays, so in most cases you don't need to modify your arrays. In the rare case where you're working with Fortran-contiguous arrays (column-major order), you may need to convert them:
+
+```python
+import numpy as np
+
+# Convert Fortran-contiguous to C-contiguous
+c_array = np.ascontiguousarray(f_array)
+```
+
+### Memory Efficiency
+
+PyPAMM uses Cython's typed memory views extensively to reduce memory overhead and avoid unnecessary copying of data. This allows us to:
+
+- Process large datasets efficiently
+- Minimize memory footprint during computation
+- Pass data by reference rather than by value
+
+### Release of GIL
+
+Performance-critical sections of the code use the `nogil` context to release the Python Global Interpreter Lock (GIL), enabling true parallel execution when used with Python's multiprocessing or multithreading.
 
 ## Development
 
