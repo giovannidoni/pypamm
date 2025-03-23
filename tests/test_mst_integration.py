@@ -40,7 +40,7 @@ def test_mst_vs_neighbor_graph():
     mst_edges = build_mst(X)
 
     # Build neighbor graph (Gabriel graph)
-    neighbor_graph = build_neighbor_graph(X, k=5, graph_type="gabriel")
+    neighbor_graph = build_neighbor_graph(X, n_neigh=5, graph_type="gabriel")
 
     # Convert MST edges to a set of tuples for comparison
     mst_edge_set = set()

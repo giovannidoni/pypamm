@@ -209,9 +209,9 @@ def test_compute_pairwise_distances_shapes(random_vectors):
     assert min_dist_id.dtype == np.int32
 
 
-def test_compute_pairwise_distances_values(random_vectors):
-    ngrid = 5
-    dist_mat, min_dist, min_dist_id = compute_pairwise_distances(random_vectors, metric="euclidean", k=2)
+def test_compute_pairwise_distances_values(simple_vectors):
+    ngrid = simple_vectors.shape[0]
+    dist_mat, min_dist, min_dist_id = compute_pairwise_distances(simple_vectors, metric="euclidean", k=2)
 
     # Distance matrix should be symmetric and diagonal should be HUGE_VAL (if set that way)
     assert np.allclose(dist_mat, dist_mat.T)

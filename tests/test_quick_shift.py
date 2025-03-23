@@ -100,8 +100,8 @@ def test_quick_shift_with_neighbor_graph():
     prob = np.ones(X.shape[0])
 
     # Build a neighbor graph
-    k_neighbors = 5
-    neighbor_graph = build_neighbor_graph(X, k=k_neighbors, metric="euclidean")
+    n_neigh = 5
+    neighbor_graph = build_neighbor_graph(X, n_neigh=n_neigh, metric="euclidean")
 
     # Run Quick-Shift clustering with neighbor graph
     labels = quick_shift(X, prob, neighbor_graph=neighbor_graph)

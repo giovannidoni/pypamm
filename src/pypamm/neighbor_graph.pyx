@@ -188,7 +188,7 @@ cpdef object build_neighbor_graph(
     # Build the appropriate graph structure
     if method == "knn":
         # K-nearest neighbors graph
-        indices, nn_distances = build_knn_graph(X, n_neigh, metric, inv_cov, False, 1)
+        indices, nn_distances = build_knn_graph(X, n_neigh, metric, k, inv_cov, False, 1)
 
         # Create the adjacency matrix from KNN indices
         for i in range(n):

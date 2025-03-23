@@ -13,10 +13,12 @@ def quick_shift(
     X: ArrayLike,
     prob: ArrayLike | None = None,
     ngrid: int = 100,
-    metric: str = "euclidean",
     lambda_qs: float = 1.0,
     max_dist: float = np.inf,
     neighbor_graph: spmatrix | None = None,
+    metric: str = "euclidean",
+    k: int = 2,
+    inv_cov: NDArray[np.float64] | None = None,
 ) -> NDArray[np.int32]:
     """
     Quick-Shift clustering algorithm based on density gradient ascent.
@@ -41,6 +43,13 @@ def quick_shift(
     neighbor_graph : scipy.sparse matrix, optional
         Pre-computed neighbor graph. If provided, this will be used instead of computing
         distances between all points, which is more efficient for large datasets.
+    k : int, default=2
+        Exponent for the Minkowski distance.
+        Only used when metric="minkowski".
+    inv_cov : array-like, shape (n_features, n_features), optional
+        Inverse covariance matrix for Mahalanobis distance.
+        Only used when metric="mahalanobis".
+
     Returns:
     -------
     labels : ndarray of shape (n_samples,)
@@ -123,7 +132,7 @@ def quick_shift(
     else:
         # Traditional implementation using the Cython code
         # Extract just the labels from the tuple returned by _quick_shift_clustering
-        labels, _ = _quick_shift_clustering(X, prob, ngrid, None, metric, lambda_qs, max_dist)
+        labels, _ = _quick_shift_clustering(X, prob, ngrid, None, lambda_qs, max_dist, metric, k, inv_cov)
         return labels
 
 
@@ -136,6 +145,8 @@ def quick_shift_kde(
     max_dist: float = np.inf,
     neighbor_graph: spmatrix | None = None,
     adaptive: bool = True,
+    k: int = 2,
+    inv_cov: NDArray[np.float64] | None = None,
 ) -> NDArray[np.int32]:
     """
     KDE-enhanced Quick-Shift clustering algorithm.
@@ -152,8 +163,6 @@ def quick_shift_kde(
         for adaptive bandwidth. Otherwise, it's used as a fixed bandwidth.
     ngrid : int, default=100
         Number of grid points.
-    metric : str, default="euclidean"
-        Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski").
     lambda_qs : float, default=1.0
         Scaling factor for density-based traversal.
     max_dist : float, default=np.inf
@@ -164,6 +173,14 @@ def quick_shift_kde(
     adaptive : bool, default=True
         Whether to use adaptive bandwidth for KDE. If True, the bandwidth parameter is used
         as the alpha parameter for adaptive bandwidth. If False, it's used as a fixed bandwidth.
+    metric : str, default="euclidean"
+        Distance metric ("euclidean", "manhattan", "chebyshev", "cosine", "mahalanobis", "minkowski").
+    k : int, default=2
+        Exponent for the Minkowski distance.
+        Only used when metric="minkowski".
+    inv_cov : array-like, shape (n_features, n_features), optional
+        Inverse covariance matrix for Mahalanobis distance.
+        Only used when metric="mahalanobis".
 
     Returns:
     -------
@@ -185,4 +202,4 @@ def quick_shift_kde(
         prob = compute_kde(X, X, constant_bandwidth=bandwidth, adaptive=False)
 
     # Call the unified quick_shift with pre-computed probabilities
-    return _quick_shift_clustering(X, prob, ngrid, neighbor_graph, metric, lambda_qs, max_dist)
+    return _quick_shift_clustering(X, prob, ngrid, neighbor_graph, lambda_qs, max_dist, metric, k, inv_cov)
