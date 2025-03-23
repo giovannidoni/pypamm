@@ -12,6 +12,20 @@ from pypamm.lib.distance cimport calculate_distance
 cpdef int qs_next(int ngrid, int idx, int idxn, double lambda_,
                   double[:] probnmm,
                   double[:, :] distmm):
+    """
+    Find the next point in the Quick Shift traversal.
+
+    Parameters:
+    - ngrid: Number of grid points
+    - idx: Current point index
+    - idxn: Current neighbor index
+    - lambda_: Scaling factor for density-based traversal
+    - probnmm: Array of probability densities for each point
+    - distmm: Distance matrix between points
+
+    Returns:
+    - Next point index in the Quick Shift path
+    """
     cdef int j
     cdef double dmin = HUGE_VAL
     cdef int qs_next_idx = idx
@@ -43,17 +57,19 @@ def quick_shift_clustering(
     Quick-Shift clustering algorithm with optional graph constraints.
 
     Parameters:
-    - X: (N x D) NumPy array (data points)
-    - prob: (N,) NumPy array of probability estimates for each point
+    - X: Data matrix (N x D) of points to cluster
+    - prob: Probability density estimates (N,) for each point
     - ngrid: Number of grid points
-    - neighbor_graph: Optional sparse graph (MST, k-NN, Gabriel Graph)
-    - metric: Distance metric ("euclidean", "manhattan", "chebyshev", etc.)
+    - neighbor_graph: Optional sparse graph (MST, k-NN, Gabriel Graph) for constrained clustering
     - lambda_qs: Scaling factor for density-based traversal (default: 1.0)
-    - max_dist: Maximum distance threshold (default: np.inf)
+    - max_dist: Maximum distance threshold for connecting points (default: np.inf)
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev", etc.)
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_conv: Optional inverse covariance matrix for mahalanobis distance
 
     Returns:
-    - cluster_labels: Cluster assignment for each point
-    - cluster_centers: Array of unique cluster centers
+    - cluster_labels: Cluster assignment for each point (N,)
+    - cluster_centers: Array of unique cluster centers (n_clusters x D)
     """
     cdef Py_ssize_t N = X.shape[0]
     cdef Py_ssize_t D = X.shape[1]

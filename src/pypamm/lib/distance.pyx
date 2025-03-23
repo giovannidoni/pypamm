@@ -120,6 +120,23 @@ cdef double dist_minkowski(
 
 # Internal function to calculate distance given the metric
 cdef double calculate_distance(str metric, double[:] a, double[:] b, int k = 2, object inv_cov = None) except *:
+    """
+    Calculate distance between two vectors using the specified metric.
+
+    Parameters:
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - a: First vector
+    - b: Second vector
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
+
+    Returns:
+    - Distance value according to the specified metric
+
+    Raises:
+    - ValueError: If an unsupported metric is specified or required parameters are missing
+    """
     # For metrics that don't require additional parameters
     cdef double[:, :] inv_cov_view
 
@@ -144,6 +161,23 @@ cdef double calculate_distance(str metric, double[:] a, double[:] b, int k = 2, 
         raise ValueError(f"Unsupported metric '{metric}'")
 
 cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, int k = 2, object inv_cov = None) except *:
+    """
+    Python-accessible function to calculate distance between two vectors.
+
+    Parameters:
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - a: First vector
+    - b: Second vector
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
+
+    Returns:
+    - Distance value according to the specified metric
+
+    Raises:
+    - ValueError: If an unsupported metric is specified or required parameters are missing
+    """
     # For metrics that don't require additional parameters
     return calculate_distance(metric, a, b, k, inv_cov)
 
@@ -155,7 +189,19 @@ cpdef tuple compute_pairwise_distances(
     object inv_cov = None,
 ):
     """
-    Return distance matrix of points in an array.
+    Compute pairwise distances between all points in the input array.
+
+    Parameters:
+    - a: Data matrix (ngrid x D) of points
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
+
+    Returns:
+    - dist_mat: Distance matrix (ngrid x ngrid) between all pairs of points
+    - min_dist: Minimum distance (ngrid,) from each point to any other point
+    - min_dist_id: Index (ngrid,) of the closest point for each point
     """
     cdef int D = a.shape[1]
     cdef int ngrid = a.shape[0]

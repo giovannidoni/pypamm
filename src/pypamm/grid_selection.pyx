@@ -26,17 +26,20 @@ cpdef tuple compute_voronoi(
     Compute the Voronoi tessellation of the data points X with respect to the
     grid points Y.
 
-    Args:
-        X: (N x D) array of data points
-        wj: (ngrid) array of weights
-        Y: (ngrid x D) array of grid points
-        idxgrid: (ngrid) array of grid point indices
-        metric: distance metric to use
-        inv_cov: inverse covariance matrix (for Mahalanobis)
-        k: parameter for Minkowski distance (p value)
+    Parameters:
+    - X: Data matrix (N x D) of sample points
+    - wj: Weights array (N,) for each sample point
+    - Y: Data matrix (ngrid x D) of grid points
+    - idxgrid: Indices array (ngrid,) of grid point indices in original dataset
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev", etc.)
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
 
     Returns:
-        Tuple of (iminij, ni, wi, ineigh)
+    - iminij: Assignment of each sample to a grid point (N,)
+    - ni: Number of samples per Voronoi cell (ngrid,)
+    - wi: Sum of weights per Voronoi cell (ngrid,)
+    - ineigh: Closest sample index to each grid point (ngrid,)
     """
     cdef Py_ssize_t nsamples = X.shape[0]
     cdef Py_ssize_t D = X.shape[1]
@@ -82,23 +85,24 @@ cpdef object select_grid_points(
 ):
     """
     Select 'ngrid' points from X (N x D) by the min–max algorithm, using one
-    of multiple metrics:
-    - euclidean
-    - manhattan
-    - chebyshev
-    - cosine
-    - mahalanobis (requires inv_cov matrix)
-    - minkowski (requires k parameter)
+    of multiple metrics.
 
-    Args:
-        X: (N x D) array of data points
-        ngrid: number of points to select
-        metric: distance metric to use
-        inv_cov: inverse covariance matrix (for Mahalanobis)
-        k: parameter for Minkowski distance (p value)
+    Parameters:
+    - X: Data matrix (N x D)
+    - ngrid: Number of points to select
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance,
+               or 1x1 array with p parameter for minkowski distance
+    - k: Parameter for Minkowski distance (p value), default is 2
 
     Returns:
-        (idxgrid, Y): indices of selected points and the corresponding data
+    - idxgrid: Indices of selected grid points (ngrid,)
+    - Y: Selected grid points matrix (ngrid x D)
+
+    Raises:
+    - ValueError: If metric is invalid, or if mahalanobis/minkowski metrics are used
+                 without proper parameters, or if X is empty
     """
     # X is already a memory view that accepts C-contiguous arrays
 
