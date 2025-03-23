@@ -16,9 +16,7 @@ def build_knn_graph(
     n_neigh: int,
     metric: str = "euclidean",
     k: int = 2,
-    inv_cov: NDArray[np.float64] | None = None,
     include_self: bool = False,
-    n_jobs: int = 1,
 ) -> tuple[NDArray[np.int32], NDArray[np.float64]]:
     """
     Build a k-nearest neighbor graph.
@@ -27,9 +25,7 @@ def build_knn_graph(
     - X: Data matrix (N x D)
     - k: Number of neighbors
     - metric: Distance metric to use
-    - inv_cov: Optional parameter for certain distance metrics
     - include_self: Whether to include self as a neighbor
-    - n_jobs: Number of parallel jobs
 
     Returns:
     - indices: Indices of k nearest neighbors for each point (N x k)
@@ -48,13 +44,16 @@ def build_knn_graph(
         raise ValueError(f"k ({k}) must be less than the number of data points ({N})")
 
     # Use scipy's KDTree for efficient neighbor search
-    from scipy.spatial import KDTree
+    from sklearn.neighbors import KDTree
 
     # Convert X to float64 if needed
     X = np.asarray(X, dtype=np.float64)
 
     # Create KDTree
-    tree = KDTree(X)
+    if metric == "minkowski":
+        tree = KDTree(X, metric=metric, p=k)
+    else:
+        tree = KDTree(X, metric=metric)
 
     # Query for k+1 neighbors (including self)
     if include_self:
@@ -63,7 +62,7 @@ def build_knn_graph(
         k_query = k + 1  # We'll compute k+1 neighbors and exclude self
 
     # Query the tree
-    distances, indices = tree.query(X, k=k_query, workers=n_jobs)
+    distances, indices = tree.query(X, k=k_query)
 
     # Remove self if needed
     if not include_self:
@@ -117,7 +116,7 @@ def build_neighbor_graph(
             raise ValueError("Must supply a 1x1 array with exponent for Minkowski.")
 
     # Get the indices and distances
-    indices, distances = build_knn_graph(X, n_neigh, metric, k, inv_cov, include_self=False, n_jobs=1)
+    indices, distances = build_knn_graph(X, n_neigh, include_self=False, metric=metric, k=k)
 
     # Create a list of lists of tuples (index, distance)
     adjacency_list = []

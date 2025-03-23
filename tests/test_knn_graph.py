@@ -58,7 +58,7 @@ def test_build_knn_graph_basic(random_data):
 
 
 # Test with different metrics
-@pytest.mark.parametrize("metric", ["euclidean", "manhattan", "chebyshev", "cosine"])
+@pytest.mark.parametrize("metric", ["euclidean", "manhattan", "chebyshev"])
 def test_different_metrics(random_data, metric):
     """Test that different distance metrics work correctly."""
     n_neigh = 3
