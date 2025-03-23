@@ -1,10 +1,16 @@
 # cython: language_level=3, boundscheck=False, wraparound=False
 # distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
+"""
+Cython implementation of minimum spanning tree (MST) algorithms.
+This module provides efficient computation of MST using Kruskal's algorithm.
+"""
+
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
 from pypamm.lib.distance cimport calculate_distance
+from libc.math cimport sqrt
 
 # Helper functions for Union-Find
 cdef int find_root(int v, int[:] parent) except? -1 nogil:

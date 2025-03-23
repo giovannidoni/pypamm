@@ -1,6 +1,11 @@
 # cython: language_level=3, boundscheck=False, wraparound=False
 # distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
+"""
+Cython implementation of Quick Shift clustering algorithm.
+This module supports density-based clustering with optional graph constraints.
+"""
+
 import numpy as np
 cimport numpy as np
 from libc.math cimport log, exp, sqrt, fabs, HUGE_VAL
@@ -20,11 +25,15 @@ cpdef int qs_next(int ngrid, int idx, int idxn, double lambda_,
     - idx: Current point index
     - idxn: Current neighbor index
     - lambda_: Scaling factor for density-based traversal
-    - probnmm: Array of probability densities for each point
-    - distmm: Distance matrix between points
+    - probnmm: Array of probability densities (ngrid,) for each point
+    - distmm: Distance matrix (ngrid x ngrid) between points
 
     Returns:
     - Next point index in the Quick Shift path
+
+    Notes:
+    - Selects the closest higher-density point within lambda_ distance
+    - Returns the original index if no suitable next point is found
     """
     cdef int j
     cdef double dmin = HUGE_VAL

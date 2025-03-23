@@ -1,6 +1,11 @@
 # cython: language_level=3, boundscheck=False, wraparound=False
 # distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
+"""
+Cython implementation of grid selection algorithms.
+This module provides efficient methods for selecting representative grid points from data.
+"""
+
 import numpy as np
 cimport numpy as np
 

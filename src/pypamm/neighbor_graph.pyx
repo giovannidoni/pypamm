@@ -2,8 +2,8 @@
 # distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
 """
-Cython implementation of neighbor graph construction
-This module supports building k-nearest neighbor (KNN) and Gabriel graphs
+Cython implementation of neighbor graph construction.
+This module supports building k-nearest neighbor (KNN) and Gabriel graphs.
 """
 
 import numpy as np
@@ -14,7 +14,7 @@ from scipy.sparse import csr_matrix  # Sparse storage for adjacency graph
 from cython.parallel import prange
 from libc.stdlib cimport malloc, free
 
-# Import distance functions from the distance_metrics module
+# Import distance functions from the distance module
 from pypamm.lib.distance cimport (
     calculate_distance
 )
@@ -24,8 +24,7 @@ ctypedef struct neighbor_t:
     int idx
     double dist
 
-# Public API - this doesn't actually control what's exported in Cython
-# The functions need to be properly defined and visible at the module level
+# Public API - these are the functions exported by this module
 __all__ = ['build_neighbor_graph', 'build_knn_graph', 'compute_knn_for_point']
 
 # Function to build a k-nearest neighbor graph
@@ -35,17 +34,22 @@ cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int n_neigh, str
     Build a k-nearest neighbors (KNN) graph.
 
     Parameters:
-    - X: Data matrix (N x D)
-    - n_neigh: Number of neighbors
-    - metric: Distance metric for neighbor calculation
-    - k:  Exponent for the distance metric
-    - inv_cov: Optional inverse covariance matrix for Mahalanobis distance
-    - include_self: Whether to include self loops
-    - n_jobs: Number of parallel jobs
+    - X: Data matrix (N x D) of points
+    - n_neigh: Number of neighbors to find for each point
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
+    - include_self: Whether to include self-loops in the graph (default: False)
+    - n_jobs: Number of parallel jobs for computation (-1 for all cores)
 
     Returns:
-    - indices: Indices of neighbors for each point (N x n_neigh)
-    - distances: Distances to neighbors for each point (N x n_neigh)
+    - indices: Indices matrix (N x n_neigh) of neighbors for each point
+    - distances: Distances matrix (N x n_neigh) to neighbors for each point
+
+    Notes:
+    - For efficiency, this implementation uses scipy's cKDTree for Euclidean distance
+    - For other metrics, custom distance computation is used
     """
     cdef Py_ssize_t n = X.shape[0]
     cdef Py_ssize_t i, j
