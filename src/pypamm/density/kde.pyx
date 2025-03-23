@@ -1,4 +1,10 @@
 # cython: language_level=3, boundscheck=False, wraparound=False, cdivision=True
+
+"""
+Cython implementation of kernel density estimation (KDE) methods.
+This module provides efficient computation of density estimates using various kernels.
+"""
+
 import numpy as np
 cimport numpy as np
 from libc.math cimport sqrt, exp
@@ -20,7 +26,7 @@ cpdef compute_bandwidth(
     double gspread=-1.0
 ):
     """
-    Computes bandwidth estimation with optional adaptivity.
+    Compute bandwidth matrix for kernel density estimation.
 
     Parameters:
     - X: (N, D) Data points.

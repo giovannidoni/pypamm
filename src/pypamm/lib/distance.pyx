@@ -2,21 +2,35 @@
 # cython: language_level=3, boundscheck=False, wraparound=False
 # distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
+"""
+Cython implementation of distance metrics for efficient computation.
+This module provides optimized distance functions for various metrics.
+"""
+
 import numpy as np
 cimport numpy as np
 from libc.math cimport fabs, sqrt, pow, HUGE_VAL
 
 # ------------------------------------------------------------------------------
-# 1) Distances that ignore the third parameter
+# Distance functions that ignore the third parameter
 # ------------------------------------------------------------------------------
 cdef double dist_euclidean(
     double[:] a,
     double[:] b,
 ) except? -1 nogil:
     """
-    Squared Euclidean distance: sum_i (a[i] - b[i])^2
-    (If you want the actual L2 distance, you'd do sqrt at the end,
-     but we've historically used squared in these examples.)
+    Squared Euclidean distance calculation.
+
+    Parameters:
+    - a: First vector (D,)
+    - b: Second vector (D,)
+
+    Returns:
+    - Squared Euclidean distance: sum_i (a[i] - b[i])^2
+
+    Notes:
+    - Returns squared distance (not actual L2 norm)
+    - Returns -1 only in case of error
     """
     cdef Py_ssize_t i, D = a.shape[0]
     cdef double diff, dist_sq = 0.0
@@ -31,7 +45,17 @@ cdef double dist_manhattan(
     double[:] b,
 ) except? -1 nogil:
     """
-    Manhattan (L1) distance = sum_i |a[i] - b[i]|.
+    Manhattan (L1) distance calculation.
+
+    Parameters:
+    - a: First vector (D,)
+    - b: Second vector (D,)
+
+    Returns:
+    - Manhattan distance: sum_i |a[i] - b[i]|
+
+    Notes:
+    - Returns -1 only in case of error
     """
     cdef Py_ssize_t i, D = a.shape[0]
     cdef double diff, dist_val = 0.0
@@ -46,7 +70,17 @@ cdef double dist_chebyshev(
     double[:] b,
 ) except? -1 nogil:
     """
-    Chebyshev (L∞) distance = max_i |a[i] - b[i]|.
+    Chebyshev (L∞) distance calculation.
+
+    Parameters:
+    - a: First vector (D,)
+    - b: Second vector (D,)
+
+    Returns:
+    - Chebyshev distance: max_i |a[i] - b[i]|
+
+    Notes:
+    - Returns -1 only in case of error
     """
     cdef Py_ssize_t i, D = a.shape[0]
     cdef double diff, max_diff = 0.0
@@ -62,8 +96,18 @@ cdef double dist_cosine(
     double[:] b,
 ) except? -1 nogil:
     """
-    Cosine distance = 1 - (a·b)/(||a|| * ||b||).
-    If either vector has length zero, define distance = 1.
+    Cosine distance calculation.
+
+    Parameters:
+    - a: First vector (D,)
+    - b: Second vector (D,)
+
+    Returns:
+    - Cosine distance: 1 - (a·b)/(||a|| * ||b||)
+
+    Notes:
+    - If either vector has zero length, returns 1.0
+    - Returns -1 only in case of error
     """
     cdef Py_ssize_t i, D = a.shape[0]
     cdef double dot_ab = 0.0
@@ -81,7 +125,7 @@ cdef double dist_cosine(
 
 
 # ------------------------------------------------------------------------------
-# 2) Distances that USE the third parameter
+# Distance functions that USE the third parameter
 # ------------------------------------------------------------------------------
 cdef double dist_mahalanobis(
     double[:] a,
@@ -89,8 +133,18 @@ cdef double dist_mahalanobis(
     double[:, :] inv_cov
 ) except? -1 nogil:
     """
-    Squared Mahalanobis distance = (a - b)^T inv_cov (a - b).
-    'inv_cov' must be a D x D inverse covariance matrix.
+    Squared Mahalanobis distance calculation.
+
+    Parameters:
+    - a: First vector (D,)
+    - b: Second vector (D,)
+    - inv_cov: Inverse covariance matrix (D x D)
+
+    Returns:
+    - Squared Mahalanobis distance: (a - b)^T inv_cov (a - b)
+
+    Notes:
+    - Returns -1 only in case of error
     """
     cdef Py_ssize_t i, j, D = a.shape[0]
     cdef double diff_i, diff_j, dsum = 0.0
@@ -108,8 +162,21 @@ cdef double dist_minkowski(
     int k
 ) except? -1 nogil:
     """
-    Minkowski distance with exponent k.
-    L_k(a, b) = ( sum_i |a[i] - b[i]|^k )^(1/k)
+    Minkowski distance calculation with exponent k.
+
+    Parameters:
+    - a: First vector (D,)
+    - b: Second vector (D,)
+    - k: Power parameter (p-norm)
+
+    Returns:
+    - Minkowski distance: (sum_i |a[i] - b[i]|^k)^(1/k)
+
+    Notes:
+    - When k=1, this is equivalent to Manhattan distance
+    - When k=2, this is equivalent to Euclidean distance
+    - When k=∞, this is equivalent to Chebyshev distance
+    - Returns -1 only in case of error
     """
     cdef Py_ssize_t i, D = a.shape[0]
     cdef double diff, accum = 0.0
@@ -120,6 +187,23 @@ cdef double dist_minkowski(
 
 # Internal function to calculate distance given the metric
 cdef double calculate_distance(str metric, double[:] a, double[:] b, int k = 2, object inv_cov = None) except *:
+    """
+    Calculate distance between two vectors using the specified metric.
+
+    Parameters:
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - a: First vector
+    - b: Second vector
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
+
+    Returns:
+    - Distance value according to the specified metric
+
+    Raises:
+    - ValueError: If an unsupported metric is specified or required parameters are missing
+    """
     # For metrics that don't require additional parameters
     cdef double[:, :] inv_cov_view
 
@@ -144,6 +228,23 @@ cdef double calculate_distance(str metric, double[:] a, double[:] b, int k = 2, 
         raise ValueError(f"Unsupported metric '{metric}'")
 
 cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, int k = 2, object inv_cov = None) except *:
+    """
+    Python-accessible function to calculate distance between two vectors.
+
+    Parameters:
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - a: First vector
+    - b: Second vector
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
+
+    Returns:
+    - Distance value according to the specified metric
+
+    Raises:
+    - ValueError: If an unsupported metric is specified or required parameters are missing
+    """
     # For metrics that don't require additional parameters
     return calculate_distance(metric, a, b, k, inv_cov)
 
@@ -155,7 +256,19 @@ cpdef tuple compute_pairwise_distances(
     object inv_cov = None,
 ):
     """
-    Return distance matrix of points in an array.
+    Compute pairwise distances between all points in the input array.
+
+    Parameters:
+    - a: Data matrix (ngrid x D) of points
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev",
+              "cosine", "mahalanobis", "minkowski")
+    - k: Parameter for Minkowski distance (p value), default is 2
+    - inv_cov: Optional inverse covariance matrix for mahalanobis distance
+
+    Returns:
+    - dist_mat: Distance matrix (ngrid x ngrid) between all pairs of points
+    - min_dist: Minimum distance (ngrid,) from each point to any other point
+    - min_dist_id: Index (ngrid,) of the closest point for each point
     """
     cdef int D = a.shape[1]
     cdef int ngrid = a.shape[0]

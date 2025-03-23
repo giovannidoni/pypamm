@@ -1,16 +1,28 @@
 # cython: language_level=3, boundscheck=False, wraparound=False
 # distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
 
+"""
+Cython implementation of minimum spanning tree (MST) algorithms.
+This module provides efficient computation of MST using Kruskal's algorithm.
+"""
+
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
 from pypamm.lib.distance cimport calculate_distance
+from libc.math cimport sqrt
 
 # Helper functions for Union-Find
 cdef int find_root(int v, int[:] parent) except? -1 nogil:
     """
     Find the root of the set containing v with path compression.
-    Returns -1 only in case of error.
+
+    Parameters:
+    - v: Vertex to find the root for
+    - parent: Array representing the parent of each vertex in the disjoint set
+
+    Returns:
+    - Root of the set containing v, or -1 in case of error
     """
     while parent[v] != v:
         parent[v] = parent[parent[v]]  # Path compression
@@ -20,7 +32,14 @@ cdef int find_root(int v, int[:] parent) except? -1 nogil:
 cdef void union_sets(int v1, int v2, int[:] parent) noexcept nogil:
     """
     Union the sets containing v1 and v2.
-    This function cannot raise exceptions.
+
+    Parameters:
+    - v1: First vertex
+    - v2: Second vertex
+    - parent: Array representing the parent of each vertex in the disjoint set
+
+    Notes:
+    - This function cannot raise exceptions.
     """
     cdef int root1 = find_root(v1, parent)
     cdef int root2 = find_root(v2, parent)
@@ -35,11 +54,15 @@ cpdef np.ndarray[np.float64_t, ndim=2] build_mst(np.ndarray[np.float64_t, ndim=2
     Builds the Minimum Spanning Tree (MST) for the dataset using Kruskal's Algorithm.
 
     Parameters:
-    - X: Data matrix (N x D)
-    - metric: Distance metric to use
+    - X: Data matrix (N x D) of points to connect with MST
+    - metric: Distance metric to use ("euclidean", "manhattan", "chebyshev", etc.)
 
     Returns:
-    - mst_edges: Array of MST edges [(i, j, distance), ...]
+    - mst_edges: Array of MST edges (N-1 x 3) where each row contains [source_idx, target_idx, distance]
+
+    Notes:
+    - The implementation uses Kruskal's algorithm with Union-Find data structure
+    - Time complexity is O(N² log N) where N is the number of points
     """
     cdef Py_ssize_t N = X.shape[0]
     cdef Py_ssize_t i, j
