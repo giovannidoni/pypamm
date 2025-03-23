@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_matrix
 
-from pypamm.distance_metrics import py_calculate_distance
+from pypamm.lib.distance import py_calculate_distance
 
 
 def build_knn_graph(

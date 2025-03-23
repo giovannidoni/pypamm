@@ -4,7 +4,7 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport sqrt
 from cython.parallel cimport prange
-from pypamm.distance_metrics cimport dist_mahalanobis
+from pypamm.lib.distance cimport dist_mahalanobis
 
 # Declare the C-level functions that will be exposed to other Cython modules
 cdef double logsumexp(np.ndarray[np.float64_t, ndim=1] arr)

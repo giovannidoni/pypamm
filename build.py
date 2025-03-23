@@ -37,13 +37,6 @@ def create_extensions():
     # Define the extension modules
     extensions = [
         Extension(
-            "pypamm.distance_metrics",
-            ["src/pypamm/distance_metrics.pyx"],
-            include_dirs=[np.get_include()],
-            extra_compile_args=extra_compile_args,
-            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
-        ),
-        Extension(
             "pypamm.grid_selection",
             ["src/pypamm/grid_selection.pyx"],
             include_dirs=[np.get_include()],
@@ -79,9 +72,17 @@ def create_extensions():
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         ),
+        # Lib modules
         Extension(
             "pypamm.lib._opx",
             ["src/pypamm/lib/_opx.pyx"],
+            include_dirs=[np.get_include()],
+            extra_compile_args=extra_compile_args,
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+        ),
+        Extension(
+            "pypamm.lib.distance",
+            ["src/pypamm/lib/distance.pyx"],
             include_dirs=[np.get_include()],
             extra_compile_args=extra_compile_args,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],

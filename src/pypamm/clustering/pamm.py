@@ -7,8 +7,8 @@ from numpy.typing import ArrayLike, NDArray
 from pypamm.clustering.adjacency import compute_adjacency, merge
 from pypamm.clustering.cluster_utils_wrapper import reindex_clusters
 from pypamm.density.kde import compute_kde
-from pypamm.distance_metrics import py_calculate_distance
 from pypamm.grid_selection import select_grid_points
+from pypamm.lib.distance import py_calculate_distance
 from pypamm.neighbor_graph import build_neighbor_graph
 from pypamm.quick_shift_wrapper import quick_shift
 

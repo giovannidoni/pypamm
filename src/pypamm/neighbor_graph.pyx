@@ -15,7 +15,7 @@ from cython.parallel import prange
 from libc.stdlib cimport malloc, free
 
 # Import distance functions from the distance_metrics module
-from pypamm.distance_metrics cimport (
+from pypamm.lib.distance cimport (
     calculate_distance
 )
 
