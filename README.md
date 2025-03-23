@@ -240,3 +240,42 @@ If you use PyPAMM in your research, please cite:
 ## Acknowledgments
 
 This package is a Python port of the original PAMM method developed by Piero Gasparotto and Michele Ceriotti at the Laboratory of Computational Science and Modeling (COSMO) at EPFL. The original Fortran implementation can be found at [https://github.com/lab-cosmo/pamm](https://github.com/lab-cosmo/pamm). We thank them for their pioneering work in this field.
+
+## Versioning
+
+PyPAMM follows [Semantic Versioning](https://semver.org/) with version numbers in the format MAJOR.MINOR.PATCH:
+
+- **MAJOR** version: Incremented for incompatible API changes
+- **MINOR** version: Incremented for added functionality in a backward-compatible manner
+- **PATCH** version: Incremented for backward-compatible bug fixes
+
+### Version Management
+
+The project includes commands to manage versions using the industry-standard `bump2version` tool:
+
+```bash
+# Show current version
+make version
+
+# Bump versions
+make version-patch  # 0.1.0 -> 0.1.1
+make version-minor  # 0.1.0 -> 0.2.0
+make version-major  # 0.1.0 -> 1.0.0
+```
+
+When you run these commands:
+1. The version number is updated in all relevant files
+2. A git commit is created with the version change
+3. A git tag is created (e.g., `v0.1.1`)
+
+You can then push the changes and tags to your repository:
+
+```bash
+git push && git push --tags
+```
+
+To use a specific version of the package in your project, specify it in your dependency requirements:
+
+```bash
+poetry add pypamm@^0.1.0  # Compatible with 0.1.x
+```

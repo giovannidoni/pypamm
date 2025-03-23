@@ -1,4 +1,4 @@
-.PHONY: clean clean-build clean-pyc clean-test clean-all test build install run-example dev all ruff
+.PHONY: clean clean-build clean-pyc clean-test clean-all test build install run-example dev all ruff version-patch version-minor version-major version
 
 # Variables
 PYTHON = python
@@ -7,6 +7,22 @@ POETRY = poetry
 
 # Default target - builds and installs the package
 all: build install
+
+# Version commands
+version:
+	@echo "Current version: $$($(POETRY) version -s)"
+
+version-patch:
+	$(POETRY) run bump2version patch
+	@echo "Version bumped to: $$($(POETRY) version -s)"
+
+version-minor:
+	$(POETRY) run bump2version minor
+	@echo "Version bumped to: $$($(POETRY) version -s)"
+
+version-major:
+	$(POETRY) run bump2version major
+	@echo "Version bumped to: $$($(POETRY) version -s)"
 
 # Clean build artifacts
 clean-build:
@@ -89,3 +105,7 @@ help:
 	@echo "test-v - run tests with verbose output (depends on install)"
 	@echo "run-example - run the example script (depends on install)"
 	@echo "dev - setup development environment"
+	@echo "version - show current version"
+	@echo "version-patch - bump patch version (0.1.0 -> 0.1.1)"
+	@echo "version-minor - bump minor version (0.1.0 -> 0.2.0)"
+	@echo "version-major - bump major version (0.1.0 -> 1.0.0)"
