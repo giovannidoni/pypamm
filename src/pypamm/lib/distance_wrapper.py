@@ -7,7 +7,7 @@ from functools import partial
 from pypamm.lib.distance import py_calculate_distance
 
 
-def get_distance_function(metric: str = "euclidean", inv_cov=None, k: float = 2.0) -> float:
+def get_distance_function(metric: str = "euclidean", inv_cov=None, k: int = 2) -> float:
     """
     Deprecated function, use calculate_distance directly.
     This function is maintained for backward compatibility only.
@@ -21,4 +21,4 @@ def get_distance_function(metric: str = "euclidean", inv_cov=None, k: float = 2.
     - Calculated distance value
     """
 
-    return partial(py_calculate_distance, metric=metric, inv_cov=inv_cov, k=k)
+    return partial(py_calculate_distance, metric=metric, k=k, inv_cov=inv_cov)

@@ -19,8 +19,8 @@ cpdef tuple compute_voronoi(
     double[:, :] Y,
     int[:] idxgrid,
     str metric = "euclidean",
-    object inv_cov = None,
-    double k = 2.0
+    int k = 2,
+    object inv_cov = None
 ):
     """
     Compute the Voronoi tessellation of the data points X with respect to the
@@ -55,7 +55,7 @@ cpdef tuple compute_voronoi(
     for i in range(ngrid):
         dneigh = HUGE_VAL
         for j in range(nsamples):
-            dij = calculate_distance(metric, X[j, :], Y[i, :], inv_cov, k)
+            dij = calculate_distance(metric, X[j, :], Y[i, :], k, inv_cov)
             if dij < dminij[j]:
                 dminij[j] = dij
                 iminij[j] = i
@@ -77,8 +77,8 @@ cpdef object select_grid_points(
     double[:, :] X,
     int ngrid,
     str metric = "euclidean",
-    object inv_cov = None,
-    double k = 2.0
+    int k = 2,
+    object inv_cov = None
 ):
     """
     Select 'ngrid' points from X (N x D) by the min–max algorithm, using one
@@ -122,7 +122,7 @@ cpdef object select_grid_points(
     cdef double max_min_dist, d
 
     for j in range(N):
-        dmin_[j] = calculate_distance(metric, X[j, :], Y[0, :], inv_cov, k)
+        dmin_[j] = calculate_distance(metric, X[j, :], Y[0, :], k, inv_cov)
 
     # 2. Iteratively pick next points
     cdef Py_ssize_t jmax
@@ -140,7 +140,7 @@ cpdef object select_grid_points(
 
         # Update dmin_ with this newly selected point
         for j in range(N):
-            d = calculate_distance(metric, X[j, :], Y[i, :], inv_cov, k)
+            d = calculate_distance(metric, X[j, :], Y[i, :], k, inv_cov)
             if d < dmin_[j]:
                 dmin_[j] = d
 

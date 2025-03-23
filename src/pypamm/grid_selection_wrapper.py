@@ -7,7 +7,11 @@ from numpy.typing import NDArray
 
 
 def py_select_grid_points(
-    X: NDArray[np.float64], ngrid: int, metric: str = "euclidean", inv_cov: NDArray[np.float64] | None = None
+    X: NDArray[np.float64],
+    ngrid: int,
+    metric: str = "euclidean",
+    k: int = 2,
+    inv_cov: NDArray[np.float64] | None = None,
 ) -> NDArray[np.float64]:
     """
     Select grid points from a dataset.
@@ -29,7 +33,7 @@ def py_select_grid_points(
     X = np.ascontiguousarray(X.astype(np.float64))
 
     # Call the Cython implementation
-    return _select_grid_points(X, ngrid, metric, inv_cov)
+    return _select_grid_points(X, ngrid, metric, k, inv_cov)
 
 
 def py_compute_voronoi(
@@ -38,6 +42,8 @@ def py_compute_voronoi(
     Y: NDArray[np.float64],
     idxgrid: NDArray[np.int32],
     metric: str = "euclidean",
+    k: int = 2,
+    inv_cov: NDArray[np.float64] | None = None,
 ) -> tuple[NDArray[np.int32], NDArray[np.int32], NDArray[np.float64], NDArray[np.int32]]:
     """
     Assign each sample in X to the closest grid point in Y (Voronoi assignment).
@@ -62,4 +68,4 @@ def py_compute_voronoi(
     Y = np.ascontiguousarray(Y, dtype=np.float64)
     idxgrid = np.ascontiguousarray(idxgrid, dtype=np.int32)
 
-    return _compute_voronoi(X, wj, Y, idxgrid, metric=metric)
+    return _compute_voronoi(X, wj, Y, idxgrid, metric=metric, k=k, inv_cov=inv_cov)

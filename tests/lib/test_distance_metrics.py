@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pypamm.lib.distance import py_calculate_distance
+from pypamm.lib.distance import compute_pairwise_distances, py_calculate_distance
 
 
 # Fixtures for common test data
@@ -141,10 +141,10 @@ def test_mahalanobis_distance(simple_vectors):
     inv_cov_view = np.ascontiguousarray(inv_cov_mat)
 
     # With identity matrix, should be same as squared Euclidean
-    dist_a_b = py_calculate_distance("mahalanobis", a_view, b_view, inv_cov_view)
+    dist_a_b = py_calculate_distance("mahalanobis", a_view, b_view, inv_cov=inv_cov_view)
     assert np.isclose(dist_a_b, 1.0)
 
-    dist_a_c = py_calculate_distance("mahalanobis", a_view, c_view, inv_cov_view)
+    dist_a_c = py_calculate_distance("mahalanobis", a_view, c_view, inv_cov=inv_cov_view)
     assert np.isclose(dist_a_c, 3.0)
 
 
@@ -190,3 +190,31 @@ def test_mahalanobis_without_inv_cov():
 
     with pytest.raises(ValueError):
         py_calculate_distance("mahalanobis", a, b)
+
+
+def test_compute_pairwise_distances_shapes(random_vectors):
+    ngrid = 10
+    dist_mat, min_dist, min_dist_id = compute_pairwise_distances(random_vectors, metric="euclidean", k=2)
+
+    assert isinstance(dist_mat, np.ndarray)
+    assert isinstance(min_dist, np.ndarray)
+    assert isinstance(min_dist_id, np.ndarray)
+
+    assert dist_mat.shape == (ngrid, ngrid)
+    assert min_dist.shape == (ngrid,)
+    assert min_dist_id.shape == (ngrid,)
+
+    assert dist_mat.dtype == np.float64
+    assert min_dist.dtype == np.float64
+    assert min_dist_id.dtype == np.int32
+
+
+def test_compute_pairwise_distances_values(simple_vectors):
+    ngrid = simple_vectors.shape[0]
+    dist_mat, min_dist, min_dist_id = compute_pairwise_distances(simple_vectors, metric="euclidean", k=2)
+
+    # Distance matrix should be symmetric and diagonal should be HUGE_VAL (if set that way)
+    assert np.allclose(dist_mat, dist_mat.T)
+    for i in range(ngrid):
+        assert np.isfinite(min_dist[i])
+        assert 0 <= min_dist_id[i] < ngrid

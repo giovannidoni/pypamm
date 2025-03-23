@@ -4,7 +4,7 @@
 
 import numpy as np
 cimport numpy as np
-from libc.math cimport fabs, sqrt, pow
+from libc.math cimport fabs, sqrt, pow, HUGE_VAL
 
 # ------------------------------------------------------------------------------
 # 1) Distances that ignore the third parameter
@@ -105,7 +105,7 @@ cdef double dist_mahalanobis(
 cdef double dist_minkowski(
     double[:] a,
     double[:] b,
-    double k
+    int k
 ) except? -1 nogil:
     """
     Minkowski distance with exponent k.
@@ -119,7 +119,7 @@ cdef double dist_minkowski(
     return pow(accum, 1.0 / k)
 
 # Internal function to calculate distance given the metric
-cdef double calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = None, double k = 2.0) except *:
+cdef double calculate_distance(str metric, double[:] a, double[:] b, int k = 2, object inv_cov = None) except *:
     # For metrics that don't require additional parameters
     cdef double[:, :] inv_cov_view
 
@@ -143,6 +143,45 @@ cdef double calculate_distance(str metric, double[:] a, double[:] b, object inv_
     else:
         raise ValueError(f"Unsupported metric '{metric}'")
 
-cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = None, double k = 2.0) except *:
+cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, int k = 2, object inv_cov = None) except *:
     # For metrics that don't require additional parameters
-    return calculate_distance(metric, a, b, inv_cov, k)
+    return calculate_distance(metric, a, b, k, inv_cov)
+
+
+cpdef tuple compute_pairwise_distances(
+    double[:, :] a,
+    str metric = "euclidean",
+    int k = 2,
+    object inv_cov = None,
+):
+    """
+    Return distance matrix of points in an array.
+    """
+    cdef int D = a.shape[1]
+    cdef int ngrid = a.shape[0]
+    cdef int i, j
+    cdef double d
+
+    cdef np.ndarray[np.float64_t, ndim=2] dist_mat = np.empty((ngrid, ngrid), dtype=np.float64)
+    cdef np.ndarray[np.float64_t, ndim=1] min_dist = np.zeros(ngrid, dtype=np.float64)
+    cdef np.ndarray[np.int32_t, ndim=1] min_dist_id = np.zeros(ngrid, dtype=np.int32)
+
+    # Initialize minimum distances
+    for i in range(ngrid):
+        min_dist[i] = HUGE_VAL
+
+    for i in range(ngrid):
+        for j in range(i):
+            d = calculate_distance(metric, a[i, :], a[j, :], k, inv_cov)
+            dist_mat[i, j] = d
+            dist_mat[j, i] = d
+
+            if d < min_dist[i]:
+                min_dist[i] = d
+                min_dist_id[i] = j
+
+            if d < min_dist[j]:
+                min_dist[j] = d
+                min_dist_id[j] = i
+
+    return dist_mat, min_dist, min_dist_id

@@ -14,6 +14,11 @@ from pypamm.lib._opx import (
     trmatrix,
     variance,
 )
+from pypamm.lib.distance import (
+    compute_pairwise_distances,
+    py_calculate_distance,
+)
+from pypamm.lib.distance_wrapper import get_distance_function
 
 # Define what should be imported with "from pypamm.lib import *"
 __all__ = [
@@ -27,4 +32,7 @@ __all__ = [
     "factorial",
     "effdim",
     "oracle",
+    "get_distance_function",
+    "py_calculate_distance",
+    "compute_pairwise_distances",
 ]

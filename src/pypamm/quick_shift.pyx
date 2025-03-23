@@ -33,9 +33,11 @@ def quick_shift_clustering(
     np.ndarray[np.float64_t, ndim=1] prob,
     int ngrid,
     object neighbor_graph=None,  # Graph-based constraints (MST, k-NN, Gabriel)
-    str metric="euclidean",
     double lambda_qs=1.0,
-    double max_dist=np.inf
+    double max_dist=np.inf,
+    str metric="euclidean",
+    int k=2,
+    object inv_conv=None
 ):
     """
     Quick-Shift clustering algorithm with optional graph constraints.
@@ -83,7 +85,7 @@ def quick_shift_clustering(
                 # Only consider neighbors with higher density (scaled by lambda_qs)
                 if prob[j] > prob[i] * lambda_qs:
                     point_j = X[j]
-                    dist_val = calculate_distance(metric, point_i, point_j)
+                    dist_val = calculate_distance(metric, point_i, point_j, k, inv_conv)
                     if dist_val < min_dist[i] and dist_val <= max_dist:
                         min_dist[i] = dist_val
                         nearest_higher_density[i] = j
@@ -98,7 +100,7 @@ def quick_shift_clustering(
                 # Only consider points with higher density (scaled by lambda_qs)
                 if prob[j] > prob[i] * lambda_qs:
                     point_j = X[j]
-                    dist_val = calculate_distance(metric, point_i, point_j)
+                    dist_val = calculate_distance(metric, point_i, point_j, k, inv_conv)
                     if dist_val < min_dist[i] and dist_val <= max_dist:
                         min_dist[i] = dist_val
                         nearest_higher_density[i] = j

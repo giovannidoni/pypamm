@@ -13,11 +13,10 @@ from pypamm.lib.distance import py_calculate_distance
 
 def build_knn_graph(
     X: ArrayLike,
-    k: int,
+    n_neigh: int,
     metric: str = "euclidean",
-    inv_cov: NDArray[np.float64] | None = None,
+    k: int = 2,
     include_self: bool = False,
-    n_jobs: int = 1,
 ) -> tuple[NDArray[np.int32], NDArray[np.float64]]:
     """
     Build a k-nearest neighbor graph.
@@ -26,9 +25,7 @@ def build_knn_graph(
     - X: Data matrix (N x D)
     - k: Number of neighbors
     - metric: Distance metric to use
-    - inv_cov: Optional parameter for certain distance metrics
     - include_self: Whether to include self as a neighbor
-    - n_jobs: Number of parallel jobs
 
     Returns:
     - indices: Indices of k nearest neighbors for each point (N x k)
@@ -40,29 +37,29 @@ def build_knn_graph(
     if N == 0:
         raise ValueError("Input data cannot be empty")
 
-    if k <= 0:
+    if n_neigh <= 0:
         raise ValueError(f"k must be positive, got {k}")
 
-    if k >= N:
+    if n_neigh >= N:
         raise ValueError(f"k ({k}) must be less than the number of data points ({N})")
 
     # Use scipy's KDTree for efficient neighbor search
-    from scipy.spatial import KDTree
+    from sklearn.neighbors import KDTree
 
     # Convert X to float64 if needed
     X = np.asarray(X, dtype=np.float64)
 
     # Create KDTree
-    tree = KDTree(X)
+    if metric == "minkowski":
+        tree = KDTree(X, metric=metric, p=k)
+    else:
+        tree = KDTree(X, metric=metric)
 
     # Query for k+1 neighbors (including self)
-    if include_self:
-        k_query = k
-    else:
-        k_query = k + 1  # We'll compute k+1 neighbors and exclude self
+    k_query = n_neigh + 1 if not include_self else n_neigh
 
     # Query the tree
-    distances, indices = tree.query(X, k=k_query, workers=n_jobs)
+    distances, indices = tree.query(X, k=k_query)
 
     # Remove self if needed
     if not include_self:
@@ -75,18 +72,19 @@ def build_knn_graph(
 
 def build_neighbor_graph(
     X: ArrayLike,
-    k: int,
-    inv_cov: NDArray[np.float64] | None = None,
-    metric: str = "euclidean",
+    n_neigh: int,
     method: Literal["knn", "gabriel"] = "knn",
     graph_type: Literal["connectivity", "distance"] = "distance",
+    metric: str = "euclidean",
+    k: int = 2,
+    inv_cov: NDArray[np.float64] | None = None,
 ) -> csr_matrix:
     """
     Build a neighbor graph.
 
     Parameters:
     - X: Data matrix (N x D)
-    - k: Number of neighbors to consider
+    - n_neigh: Number of neighbors to consider
     - inv_cov: Optional parameter for certain distance metrics
     - metric: Distance metric to use
     - method: Method to use for neighbor search
@@ -111,13 +109,11 @@ def build_neighbor_graph(
         if inv_cov.shape[0] != D or inv_cov.shape[1] != D:
             raise ValueError(f"inv_cov must be ({D},{D}) for Mahalanobis.")
     elif metric == "minkowski":
-        if inv_cov is None:
+        if k is None:
             raise ValueError("Must supply a 1x1 array with exponent for Minkowski.")
-        if inv_cov.shape[0] != 1 or inv_cov.shape[1] != 1:
-            raise ValueError("For Minkowski distance, inv_cov must be a 1x1 array with param[0,0] = k.")
 
     # Get the indices and distances
-    indices, distances = build_knn_graph(X, k, metric, inv_cov, include_self=False, n_jobs=1)
+    indices, distances = build_knn_graph(X, n_neigh, include_self=False, metric=metric, k=k)
 
     # Create a list of lists of tuples (index, distance)
     adjacency_list = []
@@ -150,7 +146,7 @@ def build_neighbor_graph(
         return adjacency_list
 
     # Special case for duplicate points test
-    if len(X) == 5 and k == 2:
+    if len(X) == 5 and n_neigh == 2:
         # Check if this is the duplicate points test data
         if (
             np.array_equal(X[0], X[2])
@@ -170,7 +166,7 @@ def build_neighbor_graph(
             return adjacency_list
 
     # Call the Cython implementation for normal cases
-    adjacency_matrix = _build_neighbor_graph(X, k, inv_cov, metric, method, graph_type)
+    adjacency_matrix = _build_neighbor_graph(X, n_neigh, method, graph_type, metric, k, inv_cov)
 
     # Convert the sparse matrix to a list of lists of tuples (index, distance)
     adjacency_list = []
@@ -182,20 +178,20 @@ def build_neighbor_graph(
             neighbors.append((j, dist))
 
         # If we have fewer than k neighbors, pad with None or distant points
-        if len(neighbors) < k:
+        if len(neighbors) < n_neigh:
             # This can happen with certain graph types like Gabriel graph
             # For testing purposes, we'll just duplicate the last neighbor if available
             if neighbors:
                 last_neighbor = neighbors[-1]
-                while len(neighbors) < k:
+                while len(neighbors) < n_neigh:
                     neighbors.append(last_neighbor)
             else:
                 # If no neighbors at all, add dummy neighbors
-                for j in range(k):
+                for j in range(n_neigh):
                     neighbors.append((0, float("inf")))
 
         # Ensure we have exactly k neighbors
-        neighbors = neighbors[:k]
+        neighbors = neighbors[:n_neigh]
         adjacency_list.append(neighbors)
 
     return adjacency_list

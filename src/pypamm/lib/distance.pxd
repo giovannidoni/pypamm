@@ -36,11 +36,14 @@ cdef double dist_mahalanobis(
 cdef double dist_minkowski(
     double[:] a,
     double[:] b,
-    double k
+    int k
 ) except? -1 nogil
 
 # Declare the internal function to get a distance function
-cdef double calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = *, double k = *) except *
+cdef double calculate_distance(str metric, double[:] a, double[:] b, int k = *, object inv_cov = *) except *
 
-# Declare the internal function to get a distance function callable in python
-cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, object inv_cov = *, double k = *) except *
+# Declare a function to get a distance function callable in python
+cpdef double py_calculate_distance(str metric, double[:] a, double[:] b, int k = *, object inv_cov = *) except *
+
+# Declare function to calculate distance matrix
+cpdef tuple compute_pairwise_distances(double[:, :] a, str metric = *, int k = *, object inv_cov = *)
