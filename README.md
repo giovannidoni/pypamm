@@ -192,17 +192,44 @@ This workflow runs tests on multiple Python versions and operating systems.
 - **test**: Runs tests on Ubuntu and macOS with Python 3.10, 3.11, and 3.12
 - **build**: Builds the package using Poetry and uploads the artifacts
 
+#### Release Workflow (`release.yml`)
+
+This workflow automates version bumping and release creation.
+
+**Triggered by:**
+- Manual dispatch with version type selection (patch, minor, major)
+
+**What it does:**
+1. Bumps the version using bump2version
+2. Commits and pushes the changes
+3. Creates a new tag
+4. Builds the package
+5. Creates a GitHub release with the build artifacts
+
+**How to use:**
+1. Go to the Actions tab in your GitHub repository
+2. Select the "Release" workflow
+3. Click "Run workflow"
+4. Select the version type (patch, minor, major)
+5. Click "Run workflow"
+
+#### Publish Workflow (`publish.yml`)
+
+This workflow automatically publishes the package to PyPI when a new tag is created.
+
+**Triggered by:**
+- Push of a tag matching `v*` (e.g., v0.1.1)
+
+**What it does:**
+1. Verifies that the tag version matches the package version
+2. Builds the package
+3. Publishes the package to PyPI
+
 ### Publishing to PyPI
 
-To publish a new release to PyPI:
-
-1. Update the version in `pyproject.toml`
-2. Commit the changes
-3. Create and push a new tag:
-   ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
+The package will be automatically published to PyPI when a new tag is created, either:
+- Manually by pushing a tag
+- By using the Release workflow
 
 ### Required Secrets
 

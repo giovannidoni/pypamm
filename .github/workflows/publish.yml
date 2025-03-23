@@ -1,0 +1,57 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'  # Run when tag matches v*, e.g., v0.1.0
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # For trusted publishing
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: 1.8.2
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install numpy==2.0.0 cython==3.0.12
+        poetry install
+
+    - name: Extract version from tag
+      id: tag
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Verify tag matches package version
+      run: |
+        PACKAGE_VERSION=$(poetry version -s)
+        TAG_VERSION=${{ steps.tag.outputs.VERSION }}
+        if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+          echo "Tag version ($TAG_VERSION) does not match package version ($PACKAGE_VERSION)"
+          exit 1
+        fi
+
+    - name: Build package
+      run: poetry build
+
+    - name: Publish package to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        # Uncomment this to publish to Test PyPI first
+        # repository-url: https://test.pypi.org/legacy/
