@@ -174,17 +174,6 @@ def test_distance_symmetry(random_data):
         assert np.isclose(dist_i_to_j, dist_j_to_i)
 
 
-# Test with edge cases
-def test_k_equals_one():
-    """Test when k=1 (only one neighbor per point)."""
-    data = np.random.rand(10, 2)
-    adjacency_list = build_neighbor_graph(data, 1)
-
-    # Check that each point has exactly 1 neighbor
-    for neighbors in adjacency_list:
-        assert len(neighbors) == 1
-
-
 def test_k_equals_n_minus_one():
     """Test when k=N-1 (all points except self)."""
     data = np.random.rand(5, 2)

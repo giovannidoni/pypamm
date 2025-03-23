@@ -56,10 +56,7 @@ def build_knn_graph(
         tree = KDTree(X, metric=metric)
 
     # Query for k+1 neighbors (including self)
-    if include_self:
-        k_query = k
-    else:
-        k_query = k + 1  # We'll compute k+1 neighbors and exclude self
+    k_query = n_neigh + 1 if not include_self else n_neigh
 
     # Query the tree
     distances, indices = tree.query(X, k=k_query)
