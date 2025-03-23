@@ -41,10 +41,10 @@ def build_knn_graph(
     if N == 0:
         raise ValueError("Input data cannot be empty")
 
-    if k <= 0:
+    if n_neigh <= 0:
         raise ValueError(f"k must be positive, got {k}")
 
-    if k >= N:
+    if n_neigh >= N:
         raise ValueError(f"k ({k}) must be less than the number of data points ({N})")
 
     # Use scipy's KDTree for efficient neighbor search
@@ -113,10 +113,8 @@ def build_neighbor_graph(
         if inv_cov.shape[0] != D or inv_cov.shape[1] != D:
             raise ValueError(f"inv_cov must be ({D},{D}) for Mahalanobis.")
     elif metric == "minkowski":
-        if inv_cov is None:
+        if k is None:
             raise ValueError("Must supply a 1x1 array with exponent for Minkowski.")
-        if inv_cov.shape[0] != 1 or inv_cov.shape[1] != 1:
-            raise ValueError("For Minkowski distance, inv_cov must be a 1x1 array with param[0,0] = k.")
 
     # Get the indices and distances
     indices, distances = build_knn_graph(X, n_neigh, metric, k, inv_cov, include_self=False, n_jobs=1)
@@ -172,7 +170,7 @@ def build_neighbor_graph(
             return adjacency_list
 
     # Call the Cython implementation for normal cases
-    adjacency_matrix = _build_neighbor_graph(X, n_neigh, metric, k, inv_cov, method, graph_type)
+    adjacency_matrix = _build_neighbor_graph(X, n_neigh, method, graph_type, metric, k, inv_cov)
 
     # Convert the sparse matrix to a list of lists of tuples (index, distance)
     adjacency_list = []

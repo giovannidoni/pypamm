@@ -33,12 +33,12 @@ def simple_data():
 # Test basic functionality
 def test_build_knn_graph_basic(random_data):
     """Test basic functionality of build_knn_graph with default parameters."""
-    k = 3
-    indices, distances = build_knn_graph(random_data, k)
+    n_neigh = 3
+    indices, distances = build_knn_graph(random_data, n_neigh)
 
     # Check shapes
-    assert indices.shape == (len(random_data), k)
-    assert distances.shape == (len(random_data), k)
+    assert indices.shape == (len(random_data), n_neigh)
+    assert distances.shape == (len(random_data), n_neigh)
 
     # Check types
     assert indices.dtype == np.int32
@@ -46,8 +46,8 @@ def test_build_knn_graph_basic(random_data):
 
     # Check that each point has exactly k neighbors
     for i in range(len(random_data)):
-        assert len(indices[i]) == k
-        assert len(distances[i]) == k
+        assert len(indices[i]) == n_neigh
+        assert len(distances[i]) == n_neigh
 
         # Check that distances are non-negative
         assert np.all(distances[i] >= 0)
@@ -61,19 +61,19 @@ def test_build_knn_graph_basic(random_data):
 @pytest.mark.parametrize("metric", ["euclidean", "manhattan", "chebyshev", "cosine"])
 def test_different_metrics(random_data, metric):
     """Test that different distance metrics work correctly."""
-    k = 3
-    indices, distances = build_knn_graph(random_data, k, metric=metric)
+    n_neigh = 3
+    indices, distances = build_knn_graph(random_data, n_neigh, metric=metric)
 
     # Verify shapes
-    assert indices.shape == (len(random_data), k)
-    assert distances.shape == (len(random_data), k)
+    assert indices.shape == (len(random_data), n_neigh)
+    assert distances.shape == (len(random_data), n_neigh)
 
 
 # Test correctness of nearest neighbor search
 def test_neighbor_search_correctness(simple_data):
     """Test that the nearest neighbors are correctly identified."""
-    k = 2  # Find 2 nearest neighbors
-    indices, distances = build_knn_graph(simple_data, k, include_self=False)
+    n_neigh = 2  # Find 2 nearest neighbors
+    indices, distances = build_knn_graph(simple_data, n_neigh, include_self=False)
 
     # For the origin point [0,0], the nearest neighbors should include points at indices 1, 2, or 4
     # (these are the closest points: [1,0], [0,1], and [0.5,0.5])
@@ -90,13 +90,13 @@ def test_neighbor_search_correctness(simple_data):
 # Test include_self parameter
 def test_include_self(random_data):
     """Test that include_self parameter works correctly."""
-    k = 3
+    n_neigh = 3
 
     # With include_self=False (default)
-    indices_without_self, _ = build_knn_graph(random_data, k, include_self=False)
+    indices_without_self, _ = build_knn_graph(random_data, n_neigh, include_self=False)
 
     # With include_self=True
-    indices_with_self, _ = build_knn_graph(random_data, k, include_self=True)
+    indices_with_self, _ = build_knn_graph(random_data, n_neigh, include_self=True)
 
     # When include_self=True, each point should have itself as the nearest neighbor
     for i in range(len(random_data)):
@@ -105,7 +105,7 @@ def test_include_self(random_data):
 
 
 # Test error cases
-def test_invalid_k(random_data):
+def test_invalid_n_neigh(random_data):
     """Test that invalid k values raise appropriate errors."""
     # k must be positive
     with pytest.raises(ValueError):
