@@ -1,6 +1,10 @@
 """
-PyPAMM (Python Probabilistic Analysis of Molecular Motifs) package.
+PyPAMM: Python Package for Advanced Manifold Methods
+
+A library for manifold learning, clustering, and density estimation.
 """
+
+__version__ = "0.1.0"
 
 # Define the modules we want to import
 __all__ = [

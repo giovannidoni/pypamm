@@ -192,17 +192,44 @@ This workflow runs tests on multiple Python versions and operating systems.
 - **test**: Runs tests on Ubuntu and macOS with Python 3.10, 3.11, and 3.12
 - **build**: Builds the package using Poetry and uploads the artifacts
 
+#### Release Workflow (`release.yml`)
+
+This workflow automates version bumping and release creation.
+
+**Triggered by:**
+- Manual dispatch with version type selection (patch, minor, major)
+
+**What it does:**
+1. Bumps the version using bump2version
+2. Commits and pushes the changes
+3. Creates a new tag
+4. Builds the package
+5. Creates a GitHub release with the build artifacts
+
+**How to use:**
+1. Go to the Actions tab in your GitHub repository
+2. Select the "Release" workflow
+3. Click "Run workflow"
+4. Select the version type (patch, minor, major)
+5. Click "Run workflow"
+
+#### Publish Workflow (`publish.yml`)
+
+This workflow automatically publishes the package to PyPI when a new tag is created.
+
+**Triggered by:**
+- Push of a tag matching `v*` (e.g., v0.1.1)
+
+**What it does:**
+1. Verifies that the tag version matches the package version
+2. Builds the package
+3. Publishes the package to PyPI
+
 ### Publishing to PyPI
 
-To publish a new release to PyPI:
-
-1. Update the version in `pyproject.toml`
-2. Commit the changes
-3. Create and push a new tag:
-   ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
+The package will be automatically published to PyPI when a new tag is created, either:
+- Manually by pushing a tag
+- By using the Release workflow
 
 ### Required Secrets
 
@@ -240,3 +267,42 @@ If you use PyPAMM in your research, please cite:
 ## Acknowledgments
 
 This package is a Python port of the original PAMM method developed by Piero Gasparotto and Michele Ceriotti at the Laboratory of Computational Science and Modeling (COSMO) at EPFL. The original Fortran implementation can be found at [https://github.com/lab-cosmo/pamm](https://github.com/lab-cosmo/pamm). We thank them for their pioneering work in this field.
+
+## Versioning
+
+PyPAMM follows [Semantic Versioning](https://semver.org/) with version numbers in the format MAJOR.MINOR.PATCH:
+
+- **MAJOR** version: Incremented for incompatible API changes
+- **MINOR** version: Incremented for added functionality in a backward-compatible manner
+- **PATCH** version: Incremented for backward-compatible bug fixes
+
+### Version Management
+
+The project includes commands to manage versions using the industry-standard `bump2version` tool:
+
+```bash
+# Show current version
+make version
+
+# Bump versions
+make version-patch  # 0.1.0 -> 0.1.1
+make version-minor  # 0.1.0 -> 0.2.0
+make version-major  # 0.1.0 -> 1.0.0
+```
+
+When you run these commands:
+1. The version number is updated in all relevant files
+2. A git commit is created with the version change
+3. A git tag is created (e.g., `v0.1.1`)
+
+You can then push the changes and tags to your repository:
+
+```bash
+git push && git push --tags
+```
+
+To use a specific version of the package in your project, specify it in your dependency requirements:
+
+```bash
+poetry add pypamm@^0.1.0  # Compatible with 0.1.x
+```
