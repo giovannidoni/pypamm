@@ -29,27 +29,28 @@ ctypedef struct neighbor_t:
 __all__ = ['build_neighbor_graph', 'build_knn_graph', 'compute_knn_for_point']
 
 # Function to build a k-nearest neighbor graph
-cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metric="euclidean",
+cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int n_neigh, str metric="euclidean", int k = 2,
                      object inv_cov=None, bint include_self=False, int n_jobs=-1):
     """
     Build a k-nearest neighbors (KNN) graph.
 
     Parameters:
     - X: Data matrix (N x D)
-    - k: Number of neighbors
+    - n_neigh: Number of neighbors
     - metric: Distance metric for neighbor calculation
+    - k:  Exponent for the distance metric
     - inv_cov: Optional inverse covariance matrix for Mahalanobis distance
     - include_self: Whether to include self loops
     - n_jobs: Number of parallel jobs
 
     Returns:
-    - indices: Indices of neighbors for each point (N x k)
-    - distances: Distances to neighbors for each point (N x k)
+    - indices: Indices of neighbors for each point (N x n_neigh)
+    - distances: Distances to neighbors for each point (N x n_neigh)
     """
     cdef Py_ssize_t n = X.shape[0]
     cdef Py_ssize_t i, j
-    cdef np.ndarray[np.int32_t, ndim=2] indices = np.zeros((n, k), dtype=np.int32)
-    cdef np.ndarray[np.float64_t, ndim=2] distances = np.zeros((n, k), dtype=np.float64)
+    cdef np.ndarray[np.int32_t, ndim=2] indices = np.zeros((n, n_neigh), dtype=np.int32)
+    cdef np.ndarray[np.float64_t, ndim=2] distances = np.zeros((n, n_neigh), dtype=np.float64)
 
     # Prepare inverse covariance matrix view for distance calculation
     cdef np.ndarray[np.float64_t, ndim=2] inv_cov_arr
@@ -61,19 +62,23 @@ cpdef tuple build_knn_graph(np.ndarray[np.float64_t, ndim=2] X, int k, str metri
     # Single-threaded implementation
     if n_jobs == 1:
         for i in range(n):
-            compute_knn_for_point(X, i, k, indices, distances, metric, inv_cov_arr, include_self)
+            compute_knn_for_point(X, i, n_neigh, indices, distances, metric, k, inv_cov_arr, include_self)
     else:
         # TODO: Implement multi-threaded version if needed
         for i in range(n):
-            compute_knn_for_point(X, i, k, indices, distances, metric, inv_cov_arr, include_self)
+            compute_knn_for_point(X, i, n_neigh, indices, distances, metric, k, inv_cov_arr, include_self)
 
     return indices, distances
 
 # Function to compute k-nearest neighbors for a single point
-cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
+cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X,
+                         int i,
+                         int n_neigh,
                          np.ndarray[np.int32_t, ndim=2] indices,
                          np.ndarray[np.float64_t, ndim=2] distances,
-                         str metric, np.ndarray[np.float64_t, ndim=2] inv_cov_arr,
+                         str metric,
+                         int k,
+                         np.ndarray[np.float64_t, ndim=2] inv_cov_arr,
                          bint include_self):
     """
     Compute k-nearest neighbors for a single point.
@@ -81,10 +86,11 @@ cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
     Parameters:
     - X: Data matrix (N x D)
     - i: Index of the current point
-    - k: Number of neighbors to find
-    - indices: Output array for indices (N x k)
-    - distances: Output array for distances (N x k)
+    - n_neigh: Number of neighbors to find
+    - indices: Output array for indices (N x n_neigh)
+    - distances: Output array for distances (N x n_neigh)
     - metric: Distance metric
+    - k: Exponent for the distance metric
     - inv_cov_arr: Inverse covariance matrix (for Mahalanobis)
     - include_self: Whether to include self loops
     """
@@ -101,7 +107,7 @@ cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
             dists[j] = np.inf
             continue
 
-        dist = calculate_distance(metric, X[i], X[j], inv_cov_arr)
+        dist = calculate_distance(metric, X[i], X[j], k, inv_cov_arr)
         dists[j] = dist
 
     # Sort distances and get k-nearest
@@ -121,28 +127,31 @@ cpdef compute_knn_for_point(np.ndarray[np.float64_t, ndim=2] X, int i, int k,
                 inds[l] = temp_ind
 
     # Copy k nearest to output arrays
-    for j in range(k):
+    for j in range(n_neigh):
         indices[i, j] = inds[j]
         distances[i, j] = dists[j]
 
 cpdef object build_neighbor_graph(
     np.ndarray[np.float64_t, ndim=2] X,
-    int k,
-    object inv_cov=None,
-    str metric="euclidean",
+    int n_neigh,
     str method="knn",
-    str graph_type="connectivity"
+    str graph_type="connectivity",
+    str metric="euclidean",
+    int k = 2,
+    object inv_cov=None,
 ):
     """
     Build a neighbor graph using the specified method.
 
     Parameters:
     - X: Data matrix (N x D)
-    - k: Number of neighbors (for KNN)
-    - inv_cov: Optional inverse covariance matrix for Mahalanobis distance
-    - metric: Distance metric to use (euclidean, manhattan, etc.)
+    - n_neigh: Number of neighbors (for KNN)
     - method: Method to build the graph (knn, gabriel)
     - graph_type: Type of graph to return (connectivity, distance)
+    - metric: Distance metric to use (euclidean, manhattan, etc.)
+    - k: Exponent for the distance metric
+    - inv_cov: Optional inverse covariance matrix for Mahalanobis distance
+
 
     Returns:
     - A sparse matrix representation of the graph (CSR format)
@@ -173,17 +182,17 @@ cpdef object build_neighbor_graph(
             if i == j:
                 distances[i, j] = 0.0
             else:
-                distances[i, j] = calculate_distance(metric, X_view[i], X_view[j], inv_cov_view)
+                distances[i, j] = calculate_distance(metric, X_view[i], X_view[j], k=k, inv_cov=inv_cov_view)
                 distances[j, i] = distances[i, j]  # Symmetric
 
     # Build the appropriate graph structure
     if method == "knn":
         # K-nearest neighbors graph
-        indices, nn_distances = build_knn_graph(X, k, metric, inv_cov, False, 1)
+        indices, nn_distances = build_knn_graph(X, n_neigh, metric, inv_cov, False, 1)
 
         # Create the adjacency matrix from KNN indices
         for i in range(n):
-            for j in range(k):
+            for j in range(n_neigh):
                 row_indices.append(i)
                 col_indices.append(indices[i, j])
 

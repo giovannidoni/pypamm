@@ -61,7 +61,7 @@ def test_quick_shift_numerical_stability():
 
     # Use the correct parameter order
     labels, centers = quick_shift_clustering(
-        X, prob, ngrid=5, neighbor_graph=None, metric="euclidean", lambda_qs=0.1, max_dist=10.0
+        X, prob, ngrid=5, neighbor_graph=None, metric="euclidean", k=2, lambda_qs=0.1, max_dist=10.0
     )
 
     # Just verify that the function runs without errors and returns valid labels
