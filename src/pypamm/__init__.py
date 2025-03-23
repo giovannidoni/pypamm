@@ -27,8 +27,8 @@ from pypamm.clustering.cluster_utils_wrapper import compute_cluster_covariance, 
 
 # Import density module
 from pypamm.density import compute_kde, gauss_prepare, kde_bootstrap_error, kde_cutoff, kde_output
-from pypamm.distance_metrics_wrapper import get_distance_function
 from pypamm.grid_selection import select_grid_points
+from pypamm.lib.distance_wrapper import get_distance_function
 from pypamm.mst_wrapper import build_mst
 from pypamm.neighbor_graph import build_neighbor_graph
 from pypamm.neighbor_graph_wrapper import build_knn_graph

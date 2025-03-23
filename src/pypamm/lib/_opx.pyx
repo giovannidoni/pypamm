@@ -16,7 +16,6 @@ ctypedef cnp.int64_t ITYPE_t
 ########## invmatrix ##########
 cpdef object invmatrix(int D, double[:, ::1] M):
     """
-    Fortran SUBROUTINE invmatrix(D,M,IM)
     Here we just return the inverted matrix as a new NumPy array.
     """
     # In Fortran, IM was the output array. In Python, we just return it.
@@ -26,7 +25,6 @@ cpdef object invmatrix(int D, double[:, ::1] M):
 ########## trmatrix ##########
 cpdef double trmatrix(int D, double[:, ::1] M):
     """
-    Fortran FUNCTION trmatrix(D,M)
     Return the trace of a square matrix.
     """
     return np.trace(M)
@@ -34,7 +32,6 @@ cpdef double trmatrix(int D, double[:, ::1] M):
 ########## detmatrix ##########
 cpdef double detmatrix(int D, double[:, ::1] M):
     """
-    Fortran FUNCTION detmatrix(D,M)
     Return the determinant of a square matrix.
     """
     return np.linalg.det(M)
@@ -42,7 +39,6 @@ cpdef double detmatrix(int D, double[:, ::1] M):
 ########## logdet ##########
 cpdef double logdet(int D, double[:, ::1] M):
     """
-    Fortran FUNCTION logdet(D,M)
     Return the log determinant of a square matrix.
     """
     cdef double sign, ld
@@ -54,7 +50,6 @@ cpdef double logdet(int D, double[:, ::1] M):
 ########## variance ##########
 cpdef double variance(int nsamples, int D, double[:, ::1] x, double[::1] weights):
     """
-    Fortran FUNCTION variance(nsamples,D,x,weights).
     Weighted variance calculation.
 
     x has shape (D, nsamples).
@@ -114,7 +109,6 @@ cpdef double variance(int nsamples, int D, double[:, ::1] x, double[::1] weights
 ########## eigval ##########
 cpdef object eigval(int D, double[:, ::1] AB):
     """
-    Fortran SUBROUTINE eigval(AB,D,WR)
     In Python, we just return the eigenvalues of AB as a NumPy array.
     """
     cdef cnp.ndarray[DTYPE_t, ndim=1] WR = np.linalg.eigvals(AB)
@@ -123,7 +117,6 @@ cpdef object eigval(int D, double[:, ::1] AB):
 ########## maxeigval ##########
 cpdef double maxeigval(int D, double[:, ::1] AB):
     """
-    Fortran FUNCTION maxeigval(AB,D).
     Return the max real eigenvalue.
     """
     cdef cnp.ndarray[DTYPE_t, ndim=1] vals = np.linalg.eigvals(AB)
@@ -136,58 +129,9 @@ cpdef int factorial(int n):
     """
     return py_factorial(n)
 
-########## pammrij ##########
-cpdef object pammrij(int D,
-            double[::1] period,
-            double[::1] ri,
-            double[::1] rj):
-    """
-    Fortran SUBROUTINE pammrij(D,period,ri,rj,rij).
-    Returns the minimum-image difference vector rij.
-    """
-    cdef cnp.ndarray[DTYPE_t, ndim=1] rij = np.zeros(D, dtype=np.float64)
-    cdef int k
-    for k in range(D):
-        rij[k] = ri[k] - rj[k]
-        if period[k] > 0.0:
-            # scale
-            rij[k] /= period[k]
-            # minimum image
-            # Fortran's DNINT is "round to nearest integer"
-            rij[k] -= round(rij[k])
-            # scale back
-            rij[k] *= period[k]
-    return rij
-
-########## mahalanobis ##########
-cpdef double mahalanobis(int D,
-                double[::1] period,
-                double[::1] x,
-                double[::1] y,
-                double[:, ::1] Qinv):
-    """
-    Fortran FUNCTION mahalanobis(D,period,x,y,Qinv).
-    Return the Mahalanobis distance.
-    """
-    cdef cnp.ndarray[DTYPE_t, ndim=1] dv = pammrij(D, period, x, y)
-    # dv @ Qinv => shape (D,)
-    cdef cnp.ndarray[DTYPE_t, ndim=1] tmp = np.zeros(D, dtype=np.float64)
-    cdef int i, j
-
-    # Manual matrix-vector multiplication
-    for i in range(D):
-        for j in range(D):
-            tmp[i] += dv[j] * Qinv[j, i]
-
-    cdef double dist = 0.0
-    for i in range(D):
-        dist += dv[i] * tmp[i]
-    return dist
-
 ########## effdim ##########
 cpdef double effdim(int D, double[:, ::1] Q):
     """
-    Fortran FUNCTION effdim(D,Q).
     Uses the eigenvalue-based formula with pk * log(pk).
     """
     cdef cnp.ndarray[DTYPE_t, ndim=1] vals = np.linalg.eigvals(Q)
@@ -208,7 +152,6 @@ cpdef double effdim(int D, double[:, ::1] Q):
 ########## oracle ##########
 cpdef object oracle(int D, double N, double[:, ::1] Q):
     """
-    Fortran SUBROUTINE oracle(D,N,Q).
     Applies a shrinkage transform in-place on Q.
     """
     cdef double trQ = 0.0

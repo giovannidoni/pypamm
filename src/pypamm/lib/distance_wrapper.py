@@ -4,7 +4,7 @@ Python wrapper for the distance_metrics Cython module.
 
 from functools import partial
 
-from pypamm.distance_metrics import py_calculate_distance
+from pypamm.lib.distance import py_calculate_distance
 
 
 def get_distance_function(metric: str = "euclidean", inv_cov=None, k: float = 2.0) -> float:

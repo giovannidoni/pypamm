@@ -4,7 +4,7 @@
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
-from pypamm.distance_metrics cimport calculate_distance
+from pypamm.lib.distance cimport calculate_distance
 
 # Helper functions for Union-Find
 cdef int find_root(int v, int[:] parent) except? -1 nogil:

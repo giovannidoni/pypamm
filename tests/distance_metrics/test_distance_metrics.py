@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pypamm.distance_metrics import py_calculate_distance
+from pypamm.lib.distance import py_calculate_distance
 
 
 # Fixtures for common test data

@@ -9,10 +9,8 @@ from pypamm.lib._opx import (
     factorial,
     invmatrix,
     logdet,
-    mahalanobis,
     maxeigval,
     oracle,
-    pammrij,
     trmatrix,
     variance,
 )
@@ -27,8 +25,6 @@ __all__ = [
     "eigval",
     "maxeigval",
     "factorial",
-    "pammrij",
-    "mahalanobis",
     "effdim",
     "oracle",
 ]

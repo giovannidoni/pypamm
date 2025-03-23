@@ -7,7 +7,7 @@ from libc.math cimport log, exp, sqrt, fabs, HUGE_VAL
 from scipy.sparse import csr_matrix
 
 # Import distance functions
-from pypamm.distance_metrics cimport calculate_distance
+from pypamm.lib.distance cimport calculate_distance
 
 cpdef int qs_next(int ngrid, int idx, int idxn, double lambda_,
                   double[:] probnmm,

@@ -4,8 +4,8 @@
 import numpy as np
 cimport numpy as np
 
-# Import distance functions from the distance_metrics module
-from pypamm.distance_metrics cimport (
+# Import distance functions from the lib module
+from pypamm.lib.distance cimport (
     calculate_distance
 )
 from libc.math cimport HUGE_VAL

@@ -66,21 +66,6 @@ def test_factorial():
     assert matrix_opx.factorial(5) == 120
 
 
-def test_pammrij():
-    period = np.array([10.0, 0.0], dtype=np.float64)
-    ri = np.array([9.0, 4.0], dtype=np.float64)
-    rj = np.array([2.0, 1.0], dtype=np.float64)
-    # For dimension=2, only the first coordinate is periodic
-    # So the difference in x is 9 - 2 = 7 => within a 10-length box => 7/10 => shift -0 => 7
-    # But the minimal image would also be -3, if we considered crossing boundary =>
-    # Actually (7/10) => 0.7 => round(0.7) => 1 => 0.7 - 1 = -0.3 => *10 => -3.
-    # So the minimal image is -3
-    # The second coordinate is 4-1=3 (non-periodic => no shift)
-    result = matrix_opx.pammrij(2, period, ri, rj)
-    expected = np.array([-3.0, 3.0], dtype=np.float64)
-    np.testing.assert_allclose(result, expected, atol=1e-7)
-
-
 def test_effdim():
     # Diagonal covariance => eigenvals = diagonal
     # Let them sum to 1+2+3=6 => pk=[1/6,2/6,3/6], sum pk log(pk).

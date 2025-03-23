@@ -5,7 +5,7 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport sqrt, log, exp
 from cython.parallel import prange
-from pypamm.distance_metrics cimport dist_mahalanobis
+from pypamm.lib.distance cimport dist_mahalanobis
 
 # ------------------------------------------------------------------------------
 # 1. Cluster Covariance Computation
