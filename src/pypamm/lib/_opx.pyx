@@ -1,10 +1,11 @@
 # cython: boundscheck=False, wraparound=False, cdivision=True
 
 import numpy as np
-cimport numpy as cnp
-from libc.math cimport log, sqrt
+cimport numpy as np
+from libc.math cimport log, sqrt, pow
 from math import factorial as py_factorial
 from math import floor, ceil
+
 
 # Initialize NumPy (required once per extension)
 cnp.import_array()
@@ -14,7 +15,7 @@ ctypedef cnp.float64_t DTYPE_t
 ctypedef cnp.int64_t ITYPE_t
 
 ########## invmatrix ##########
-cpdef object invmatrix(int D, double[:, ::1] M):
+cpdef object invmatrix(double[:, ::1] M):
     """
     Here we just return the inverted matrix as a new NumPy array.
     """
@@ -23,21 +24,21 @@ cpdef object invmatrix(int D, double[:, ::1] M):
     return IM
 
 ########## trmatrix ##########
-cpdef double trmatrix(int D, double[:, ::1] M):
+cpdef double trmatrix(double[:, ::1] M):
     """
     Return the trace of a square matrix.
     """
     return np.trace(M)
 
 ########## detmatrix ##########
-cpdef double detmatrix(int D, double[:, ::1] M):
+cpdef double detmatrix(double[:, ::1] M):
     """
     Return the determinant of a square matrix.
     """
     return np.linalg.det(M)
 
 ########## logdet ##########
-cpdef double logdet(int D, double[:, ::1] M):
+cpdef double logdet(double[:, ::1] M):
     """
     Return the log determinant of a square matrix.
     """
@@ -47,67 +48,8 @@ cpdef double logdet(int D, double[:, ::1] M):
     # Here we just return ld directly (log|det|).
     return ld
 
-########## variance ##########
-cpdef double variance(int nsamples, int D, double[:, ::1] x, double[::1] weights):
-    """
-    Weighted variance calculation.
-
-    x has shape (D, nsamples).
-    weights has shape (nsamples,).
-    """
-    # Follows the formula:
-    # variance = wsum/( (sum(weights))^2 - sum(weights^2) ) * sum( weights * (NORM2(xtmp,1))^2 )
-    # where xtmp(i,:) = x(i,:)-xm(i).
-    # The Fortran code also prints "Mean", but we'll skip that here.
-    cdef double wsum = np.sum(weights)
-    # Weighted mean of each row
-    # shape (D,) for xm
-    cdef cnp.ndarray[DTYPE_t, ndim=1] xm = np.zeros(D, dtype=np.float64)
-    cdef int i, j
-
-    # Calculate weighted mean manually
-    for i in range(D):
-        for j in range(nsamples):
-            xm[i] += x[i, j] * weights[j]
-        xm[i] /= wsum
-
-    # Build xtmp = x - xm row-wise
-    # In Fortran: xtmp(i,:) = x(i,:) - xm(i)
-    cdef cnp.ndarray[DTYPE_t, ndim=2] xtmp = np.zeros((D, nsamples), dtype=np.float64)
-    for i in range(D):
-        for j in range(nsamples):
-            xtmp[i, j] = x[i, j] - xm[i]
-
-    # Sum of weights^2
-    cdef double sum_w2 = 0.0
-    for j in range(nsamples):
-        sum_w2 += weights[j] * weights[j]
-
-    # Weighted sum of squared norms
-    # We interpret "NORM2(xtmp,1)" as the 2-norm of each row (?),
-    # but the Fortran code seems ambiguous.
-    # Typically, you'd want the 2-norm of each sample vector => columns.
-    # Let's do column-based norms (since Fortran indexing is x(i,sample)):
-    cdef double wsum_norm = 0
-    cdef double tmp_norm
-    for j in range(nsamples):
-        # 2-norm of xtmp[:, j]
-        tmp_norm = 0
-        for i in range(D):
-            tmp_norm += xtmp[i, j] * xtmp[i, j]
-        wsum_norm += weights[j] * tmp_norm  # (norm)^2
-
-    # Full factor
-    cdef double denominator = (wsum*wsum - sum_w2)
-    if denominator == 0:
-        # to avoid dividing by zero
-        return 0.0
-    cdef double varval = wsum / denominator * wsum_norm
-
-    return varval
-
 ########## eigval ##########
-cpdef object eigval(int D, double[:, ::1] AB):
+cpdef object eigval(double[:, ::1] AB):
     """
     In Python, we just return the eigenvalues of AB as a NumPy array.
     """
@@ -115,7 +57,7 @@ cpdef object eigval(int D, double[:, ::1] AB):
     return WR
 
 ########## maxeigval ##########
-cpdef double maxeigval(int D, double[:, ::1] AB):
+cpdef double maxeigval(double[:, ::1] AB):
     """
     Return the max real eigenvalue.
     """
@@ -130,7 +72,7 @@ cpdef int factorial(int n):
     return py_factorial(n)
 
 ########## effdim ##########
-cpdef double effdim(int D, double[:, ::1] Q):
+cpdef double effdim(double[:, ::1] Q):
     """
     Uses the eigenvalue-based formula with pk * log(pk).
     """
@@ -150,10 +92,11 @@ cpdef double effdim(int D, double[:, ::1] Q):
     return np.exp(-sum_plogp)
 
 ########## oracle ##########
-cpdef object oracle(int D, double N, double[:, ::1] Q):
+cpdef object oracle(double[:, ::1] Q, double N):
     """
     Applies a shrinkage transform in-place on Q.
     """
+    cdef Py_ssize_t D = Q.shape[1]
     cdef double trQ = 0.0
     cdef double trQ2 = 0.0
     cdef int i, j
@@ -199,4 +142,50 @@ cpdef object oracle(int D, double N, double[:, ::1] Q):
                 Q[i, j] = alpha * Q[i, j]
 
     # No return — modifies Q in place, as a Fortran SUBROUTINE would.
-    return None
+    return Q
+
+########## weighted covariance ##########
+cpdef object wcovariance(
+    double[:, ::1] x,        # shape (N, D)
+    double[::1] w,         # shape (N,)
+    double wnorm
+):
+    """
+    Calculate weighted covariance.
+    """
+    cdef Py_ssize_t N = x.shape[0]
+    cdef Py_ssize_t D = x.shape[1]
+    cdef int n = N
+    cdef int d = D
+
+    cdef np.ndarray[np.float64_t, ndim=1] xm = np.zeros(D, dtype=np.float64)
+    cdef np.ndarray[np.float64_t, ndim=2] xxm = np.zeros((N, D), dtype=np.float64)
+    cdef np.ndarray[np.float64_t, ndim=2] xxmw = np.zeros((N, D), dtype=np.float64)
+
+    cdef Py_ssize_t i, j
+
+    # Compute weighted mean
+    for j in range(D):
+        for i in range(N):
+            xm[j] += x[i, j] * w[i]
+        xm[j] /= wnorm
+
+    # Compute differences and weighted differences
+    for i in range(N):
+        for j in range(D):
+            xxm[i, j] = x[i, j] - xm[j]
+            xxmw[i, j] = xxm[i, j] * w[i] / wnorm
+
+    # Call DGEMM: Q = xxm.T @ xxmw
+    cdef np.ndarray[np.float64_t, ndim=2] Q = np.dot(xxm.T, xxmw)
+
+    # Denominator: 1 - sum((w / wnorm)^2)
+    cdef double correction = 0.0
+    for i in range(N):
+        correction += (w[i] / wnorm) ** 2
+
+    for i in range(D):
+        for j in range(D):
+            Q[i, j] /= (1.0 - correction)
+
+    return Q

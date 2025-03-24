@@ -81,7 +81,7 @@ poetry run python examples/pamm_clustering_example.py
 - **Grid Selection**: Demonstrates how to select a subset of points from a dataset based on a grid
 - **Neighbor Graph**: Shows how to build different types of neighborhood graphs
 - **Quick Shift Clustering**: Illustrates the use of the Quick Shift algorithm for clustering
-  - **Graph-based Quick Shift**: Shows how to use pre-computed neighbor graphs for faster clustering
+- **Graph-based Quick Shift**: Shows how to use pre-computed neighbor graphs for faster clustering
 - **Minimum Spanning Tree (MST)**: Demonstrates how to build and use MSTs
 - **Complete Pipeline**: Shows how to combine multiple algorithms in a data analysis pipeline
 - **PAMM Clustering**: Demonstrates the complete PAMM algorithm with bootstrapping and graph-based optimization
