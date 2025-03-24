@@ -12,7 +12,7 @@ from pypamm.lib._opx import (
     maxeigval,
     oracle,
     trmatrix,
-    variance,
+    wcovariance,
 )
 from pypamm.lib.distance import (
     compute_pairwise_distances,
@@ -26,12 +26,12 @@ __all__ = [
     "trmatrix",
     "detmatrix",
     "logdet",
-    "variance",
     "eigval",
     "maxeigval",
     "factorial",
     "effdim",
     "oracle",
+    "wcovariance",
     "get_distance_function",
     "py_calculate_distance",
     "compute_pairwise_distances",
