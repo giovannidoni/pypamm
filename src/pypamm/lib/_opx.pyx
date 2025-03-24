@@ -2,7 +2,7 @@
 
 import numpy as np
 cimport numpy as np
-from libc.math cimport log, sqrt, pow
+from libc.math cimport log, sqrt, pow, exp
 from math import factorial as py_factorial
 from math import floor, ceil
 
@@ -189,3 +189,31 @@ cpdef object wcovariance(
             Q[i, j] /= (1.0 - correction)
 
     return Q
+
+
+########## compute localised weight ##########
+cpdef tuple compute_localization(
+    double[:, ::1] x,      # shape (N, D)
+    double[::1] y,       # shape (D,)
+    double[::1] w,       # shape (N,)
+    double sigma
+):
+    """
+    Calculate weighted covariance.
+    """
+    cdef Py_ssize_t N = x.shape[0]
+    cdef Py_ssize_t D = x.shape[1]
+    cdef Py_ssize_t i, j
+    cdef double diff, dist2
+    cdef np.ndarray[np.float64_t, ndim=1] wl = np.empty(N, dtype=np.float64)
+    cdef double num = 0.0
+
+    for i in range(N):
+        dist2 = 0.0
+        for j in range(D):
+            diff = x[i, j] - y[j]
+            dist2 += diff * diff
+        wl[i] = exp(-0.5 * dist2 / sigma) * w[i]
+        num += wl[i]
+
+    return wl, num
