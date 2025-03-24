@@ -101,3 +101,25 @@ def test_covariance_against_numpy():
     # Check shapes and numerical closeness
     assert Q.shape == Q_np.shape
     np.testing.assert_allclose(Q, Q_np, rtol=1e-10, atol=1e-12)
+
+
+def test_compute_localization_gaussian_weighting():
+    """Test that compute_localization behaves like manual Gaussian weighting."""
+    np.random.seed(42)
+    N, D = 100, 3
+    X = np.random.rand(N, D)
+    y = np.random.rand(D)
+    w = np.random.rand(N)
+    sigma = 0.1
+
+    # Compute using Cython function
+    wl, num = matrix_opx.compute_localization(X, y, w, sigma)
+
+    # Reference implementation in NumPy
+    diffs = X - y[None, :]
+    dist2 = np.sum(diffs**2, axis=1)
+    wl_expected = np.exp(-0.5 * dist2 / sigma) * w
+    num_expected = np.sum(wl_expected)
+
+    np.testing.assert_allclose(wl, wl_expected, rtol=1e-12)
+    np.testing.assert_allclose(num, num_expected, rtol=1e-12)

@@ -3,6 +3,7 @@ Optimized operations library for PyPAMM.
 """
 
 from pypamm.lib._opx import (
+    compute_localization,
     detmatrix,
     effdim,
     eigval,
@@ -32,6 +33,7 @@ __all__ = [
     "effdim",
     "oracle",
     "wcovariance",
+    "compute_localization",
     "get_distance_function",
     "py_calculate_distance",
     "compute_pairwise_distances",
