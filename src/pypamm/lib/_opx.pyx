@@ -193,7 +193,7 @@ cpdef object wcovariance(
 
 ########## compute localised weight ##########
 cpdef tuple compute_localization(
-    double[:, ::1] x,      # shape (N, D)
+    double[:, ::1] x,    # shape (N, D)
     double[::1] y,       # shape (D,)
     double[::1] w,       # shape (N,)
     double sigma

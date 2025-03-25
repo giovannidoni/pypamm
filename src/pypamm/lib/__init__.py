@@ -20,6 +20,10 @@ from pypamm.lib.distance import (
     py_calculate_distance,
 )
 from pypamm.lib.distance_wrapper import get_distance_function
+from pypamm.lib.neighbours import (
+    compute_voronoi,
+    get_voronoi_neighbour_list,
+)
 
 # Define what should be imported with "from pypamm.lib import *"
 __all__ = [
@@ -37,4 +41,6 @@ __all__ = [
     "get_distance_function",
     "py_calculate_distance",
     "compute_pairwise_distances",
+    "compute_voronoi",
+    "get_voronoi_neighbour_list",
 ]

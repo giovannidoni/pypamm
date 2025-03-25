@@ -185,6 +185,7 @@ cdef double dist_minkowski(
         accum += pow(diff, k)
     return pow(accum, 1.0 / k)
 
+
 # Internal function to calculate distance given the metric
 cdef double calculate_distance(str metric, double[:] a, double[:] b, int k = 2, object inv_cov = None) except *:
     """

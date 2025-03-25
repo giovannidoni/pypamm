@@ -95,6 +95,7 @@ dmypy.json
 .vscode/
 *.swp
 *.swo
+*.ipynb
 
 # OS specific files
 .DS_Store
