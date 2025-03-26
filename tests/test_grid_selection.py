@@ -1,41 +1,14 @@
 import numpy as np
 import pytest
 
-from pypamm.grid_selection_wrapper import py_compute_voronoi, py_select_grid_points
-
-
-@pytest.fixture
-def random_2d_data():
-    np.random.seed(42)
-    X = np.random.rand(100, 2)
-    return X
-
-
-@pytest.fixture
-def simple_data_voronoi():
-    X = np.array([[0.0, 0.0], [1.0, 1.0], [9.0, 9.0], [10.0, 10.0]], dtype=np.float64)
-    Y = np.array([[0.0, 0.0], [10.0, 10.0]], dtype=np.float64)
-    wj = np.ones(4, dtype=np.float64)
-    idxgrid = np.array([0, 3], dtype=np.int32)
-    return X, Y, wj, idxgrid
-
-
-@pytest.fixture
-def simple_data():
-    """Simple dataset with known structure for predictable tests."""
-    # Create a grid of points in 2D
-    x = np.linspace(0, 1, 5)
-    y = np.linspace(0, 1, 5)
-    xx, yy = np.meshgrid(x, y)
-    points = np.column_stack([xx.ravel(), yy.ravel()])
-    return points
+from pypamm.grid_selection import select_grid_points
 
 
 # Test basic functionality
 def test_select_grid_points_basic(simple_data):
     """Test basic functionality of select_grid_points with default parameters."""
     ngrid = 10
-    idxgrid, Y = py_select_grid_points(simple_data, ngrid)
+    idxgrid, Y = select_grid_points(simple_data, ngrid)
 
     # Check output shapes
     assert idxgrid.shape == (ngrid,)
@@ -55,7 +28,7 @@ def test_select_grid_points_basic(simple_data):
 def test_different_metrics(simple_data, metric):
     """Test select_grid_points with different distance metrics."""
     ngrid = 5
-    idxgrid, Y = py_select_grid_points(simple_data, ngrid, metric=metric)
+    idxgrid, Y = select_grid_points(simple_data, ngrid, metric=metric)
 
     # Check output shapes
     assert idxgrid.shape == (ngrid,)
@@ -75,7 +48,7 @@ def test_mahalanobis_distance(simple_data):
     # Create an identity matrix for simplicity (reduces to Euclidean)
     inv_cov = np.eye(D)
 
-    idxgrid, Y = py_select_grid_points(simple_data, ngrid, metric="mahalanobis", inv_cov=inv_cov)
+    idxgrid, Y = select_grid_points(simple_data, ngrid, metric="mahalanobis", inv_cov=inv_cov)
 
     # Check output shapes
     assert idxgrid.shape == (ngrid,)
@@ -94,7 +67,7 @@ def test_minkowski_distance(simple_data):
     # Create parameter for p=2 (Euclidean)
     p = np.array([[2.0]])
 
-    idxgrid, Y = py_select_grid_points(simple_data, ngrid, metric="minkowski", inv_cov=p)
+    idxgrid, Y = select_grid_points(simple_data, ngrid, metric="minkowski", inv_cov=p)
 
     # Check output shapes
     assert idxgrid.shape == (ngrid,)
@@ -109,20 +82,20 @@ def test_minkowski_distance(simple_data):
 def test_invalid_metric(simple_data):
     """Test that an invalid metric raises a ValueError."""
     with pytest.raises(ValueError, match="Unsupported metric"):
-        py_select_grid_points(simple_data, 5, metric="invalid_metric")
+        select_grid_points(simple_data, 5, metric="invalid_metric")
 
 
 def test_mahalanobis_without_inv_cov(simple_data):
     """Test that Mahalanobis without inv_cov raises a ValueError."""
     with pytest.raises(ValueError, match="Must supply inv_cov"):
-        py_select_grid_points(simple_data, 5, metric="mahalanobis")
+        select_grid_points(simple_data, 5, metric="mahalanobis")
 
 
 # Test algorithm correctness
 def test_min_max_algorithm_correctness(simple_data):
     """Test that the min-max algorithm selects points that maximize minimum distance."""
     ngrid = 4
-    idxgrid, Y = py_select_grid_points(simple_data, ngrid)
+    idxgrid, Y = select_grid_points(simple_data, ngrid)
 
     # The algorithm should select points that are far apart
     # For our simple grid, we expect points near the corners
@@ -142,7 +115,7 @@ def test_min_max_algorithm_correctness(simple_data):
 def test_ngrid_equals_data_size():
     """Test when ngrid equals the number of data points."""
     data = np.random.rand(5, 2)
-    idxgrid, Y = py_select_grid_points(data, 5)
+    idxgrid, Y = select_grid_points(data, 5)
 
     # Should select all points
     assert len(idxgrid) == 5
@@ -167,7 +140,7 @@ def test_comprehensive_ngrid_equals_data_size():
     np.random.seed(42)
 
     # Select all points
-    idxgrid, Y = py_select_grid_points(data, 5)
+    idxgrid, Y = select_grid_points(data, 5)
 
     # Verify all points were selected
     assert len(idxgrid) == 5
@@ -221,7 +194,7 @@ def test_comprehensive_ngrid_equals_data_size():
 def test_single_point_selection():
     """Test selecting a single point."""
     data = np.random.rand(10, 2)
-    idxgrid, Y = py_select_grid_points(data, 1)
+    idxgrid, Y = select_grid_points(data, 1)
 
     assert idxgrid.shape == (1,)
     assert Y.shape == (1, 2)
@@ -231,7 +204,7 @@ def test_high_dimensional_data():
     """Test with high-dimensional data."""
     data = np.random.rand(20, 10)  # 20 points in 10D
     ngrid = 5
-    idxgrid, Y = py_select_grid_points(data, ngrid)
+    idxgrid, Y = select_grid_points(data, ngrid)
 
     assert idxgrid.shape == (ngrid,)
     assert Y.shape == (ngrid, 10)
@@ -243,10 +216,10 @@ def test_reproducibility():
 
     # Set the same seed before each call
     np.random.seed(42)
-    idxgrid1, Y1 = py_select_grid_points(data, 5)
+    idxgrid1, Y1 = select_grid_points(data, 5)
 
     np.random.seed(42)
-    idxgrid2, Y2 = py_select_grid_points(data, 5)
+    idxgrid2, Y2 = select_grid_points(data, 5)
 
     # Results should be identical
     np.testing.assert_array_equal(idxgrid1, idxgrid2)
@@ -258,7 +231,7 @@ def test_integer_data():
     """Test with integer data."""
     # Convert integer data to float64
     data = np.random.randint(0, 100, size=(20, 3)).astype(np.float64)
-    idxgrid, Y = py_select_grid_points(data, 5)
+    idxgrid, Y = select_grid_points(data, 5)
 
     assert idxgrid.shape == (5,)
     assert Y.shape == (5, 3)
@@ -282,20 +255,18 @@ def test_with_duplicate_points():
         dtype=np.float64,
     )
 
-    idxgrid, Y = py_select_grid_points(data, 3)
+    idxgrid, Y = select_grid_points(data, 3)
 
     # Should select 3 unique points (even though there are only 3 unique coordinates)
     assert len(np.unique(Y, axis=0)) == 3
 
 
 # Additional tests for edge cases and specific behaviors
-
-
 def test_one_dimensional_data():
     """Test with one-dimensional data."""
     data = np.random.rand(10, 1)  # 10 points in 1D
     ngrid = 5
-    idxgrid, Y = py_select_grid_points(data, ngrid)
+    idxgrid, Y = select_grid_points(data, ngrid)
 
     assert idxgrid.shape == (ngrid,)
     assert Y.shape == (ngrid, 1)
@@ -307,15 +278,15 @@ def test_different_minkowski_exponents():
 
     # Test with p=1 (Manhattan)
     p1 = np.array([[1.0]])
-    idxgrid1, Y1 = py_select_grid_points(data, 5, metric="minkowski", inv_cov=p1)
+    idxgrid1, Y1 = select_grid_points(data, 5, metric="minkowski", inv_cov=p1)
 
     # Test with p=2 (Euclidean)
     p2 = np.array([[2.0]])
-    idxgrid2, Y2 = py_select_grid_points(data, 5, metric="minkowski", inv_cov=p2)
+    idxgrid2, Y2 = select_grid_points(data, 5, metric="minkowski", inv_cov=p2)
 
     # Test with p=inf (approximated with a large value, should be similar to Chebyshev)
     p_inf = np.array([[1000.0]])
-    idxgrid_inf, Y_inf = py_select_grid_points(data, 5, metric="minkowski", inv_cov=p_inf)
+    idxgrid_inf, Y_inf = select_grid_points(data, 5, metric="minkowski", inv_cov=p_inf)
 
     # The selected points should be different for different exponents
     # This is a probabilistic test, so it might occasionally fail
@@ -330,14 +301,14 @@ def test_mahalanobis_with_non_identity_matrix():
     # Create a non-identity inverse covariance matrix
     inv_cov = np.array([[2.0, 0.5], [0.5, 1.0]])
 
-    idxgrid, Y = py_select_grid_points(data, 5, metric="mahalanobis", inv_cov=inv_cov)
+    idxgrid, Y = select_grid_points(data, 5, metric="mahalanobis", inv_cov=inv_cov)
 
     # Basic shape checks
     assert idxgrid.shape == (5,)
     assert Y.shape == (5, 2)
 
     # Compare with Euclidean distance (should select different points)
-    idxgrid_euclidean, Y_euclidean = py_select_grid_points(data, 5)
+    idxgrid_euclidean, Y_euclidean = select_grid_points(data, 5)
 
     # The selected points should be different due to the different distance metric
     # This is a probabilistic test, so it might occasionally fail
@@ -358,7 +329,7 @@ def test_cosine_with_zero_vectors():
         dtype=np.float64,
     )
 
-    idxgrid, Y = py_select_grid_points(data, 3, metric="cosine")
+    idxgrid, Y = select_grid_points(data, 3, metric="cosine")
 
     # Basic shape checks
     assert idxgrid.shape == (3,)
@@ -372,67 +343,8 @@ def test_numerical_stability():
 
     # Test with different metrics
     for metric in ["euclidean", "manhattan", "chebyshev", "cosine"]:
-        idxgrid, Y = py_select_grid_points(data, 3, metric=metric)
+        idxgrid, Y = select_grid_points(data, 3, metric=metric)
 
         # Basic shape checks
         assert idxgrid.shape == (3,)
         assert Y.shape == (3, 2)
-
-
-def test_voronoi_basic(simple_data_voronoi):
-    X, Y, wj, idxgrid = simple_data_voronoi
-    iminij, ni, wi, ineigh = py_compute_voronoi(X, wj, Y, idxgrid, metric="euclidean")
-
-    assert iminij.shape == (X.shape[0],)
-    assert ni.shape == (Y.shape[0],)
-    assert wi.shape == (Y.shape[0],)
-    assert ineigh.shape == (Y.shape[0],)
-    assert np.sum(ni) == X.shape[0]
-    np.testing.assert_allclose(np.sum(wi), np.sum(wj))
-
-
-def test_voronoi_single_grid_point(random_2d_data):
-    wj = np.zeros(random_2d_data.shape[0], dtype=np.float64)
-
-    Y = np.array([[0.5, 0.5]], dtype=np.float64)
-    idxgrid = np.array([0], dtype=np.int32)
-
-    iminij, ni, wi, ineigh = py_compute_voronoi(random_2d_data, wj, Y, idxgrid, metric="euclidean")
-
-    assert np.all(iminij == 0)
-    assert ni[0] == random_2d_data.shape[0]
-    assert np.isclose(wi[0], np.sum(wj))
-
-
-def test_voronoi_zero_weights(random_2d_data):
-    wj = np.zeros(random_2d_data.shape[0], dtype=np.float64)
-    Y = np.array([[0.0, 0.0], [1.0, 1.0]])
-    idxgrid = np.array([0, 1], dtype=np.int32)
-
-    iminij, ni, wi, ineigh = py_compute_voronoi(random_2d_data, wj, Y, idxgrid, metric="euclidean")
-
-    assert np.sum(ni) == random_2d_data.shape[0]
-    assert np.allclose(wi, 0.0)
-    assert ineigh.shape == (Y.shape[0],)
-
-
-def test_voronoi_invalid_metric(simple_data_voronoi):
-    X, Y, wj, idxgrid = simple_data_voronoi
-
-    with pytest.raises(ValueError, match="Unsupported metric"):
-        py_compute_voronoi(X, wj, Y, idxgrid, metric="banana")
-
-
-def test_grid_selection_voronoi(random_2d_data):
-    wj = np.zeros(random_2d_data.shape[0], dtype=np.float64)
-
-    idxgrid, Y = py_select_grid_points(random_2d_data, 10, metric="euclidean")
-
-    iminij, ni, wi, ineigh = py_compute_voronoi(random_2d_data, wj, Y, idxgrid, metric="euclidean")
-
-    assert iminij.shape == (random_2d_data.shape[0],)
-    assert ni.shape == (Y.shape[0],)
-    assert wi.shape == (Y.shape[0],)
-    assert ineigh.shape == (Y.shape[0],)
-    assert np.sum(ni) == random_2d_data.shape[0]
-    np.testing.assert_allclose(np.sum(wi), np.sum(wj))
